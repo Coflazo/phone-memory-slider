@@ -5,6 +5,8 @@ void run_ranking_tests();
 void run_review_queue_tests();
 void run_review_session_tests();
 void run_fixture_catalog_tests();
+void run_media_analysis_tests();
+void run_preference_model_tests();
 void run_protocol_contract_tests();
 
 int main() {
@@ -13,6 +15,8 @@ int main() {
         run_review_queue_tests();
         run_review_session_tests();
         run_fixture_catalog_tests();
+        run_media_analysis_tests();
+        run_preference_model_tests();
         run_protocol_contract_tests();
         std::cout << "All core tests passed\n";
         return 0;

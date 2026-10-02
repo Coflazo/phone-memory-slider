@@ -1,6 +1,8 @@
 add_executable(pms_core_tests
   test_main.cpp
   fixture_catalog_tests.cpp
+  media_analysis_tests.cpp
+  preference_model_tests.cpp
   protocol_contract_tests.cpp
   ranking_tests.cpp
   review_session_tests.cpp

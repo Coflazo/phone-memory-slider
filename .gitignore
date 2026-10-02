@@ -2,6 +2,7 @@
 .superpowers/
 .tools/
 build/
+build-*/
 out/
 .cache/
 .idea/
@@ -14,4 +15,3 @@ local.properties
 *.db
 *.db-shm
 *.db-wal
-
