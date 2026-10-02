@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -280,23 +279,27 @@ private fun requiredPermissions(): Array<String> = buildList {
 }.toTypedArray()
 
 private val DarkColors: ColorScheme = darkColorScheme(
-    primary = Color(0xFFC7FF68),
-    onPrimary = Color(0xFF152000),
-    background = Color(0xFF0B0D0D),
-    surface = Color(0xFF121515),
-    surfaceVariant = Color(0xFF1B2020),
-    onSurface = Color(0xFFF3F6F1),
-    onSurfaceVariant = Color(0xFFAAB3AE),
+    primary = PmsTokens.AccentDark,
+    onPrimary = PmsTokens.CanvasDark,
+    background = PmsTokens.CanvasDark,
+    surface = PmsTokens.SurfaceDark,
+    surfaceVariant = PmsTokens.RaisedDark,
+    outline = PmsTokens.BorderDark,
+    error = PmsTokens.DeleteDark,
+    onSurface = PmsTokens.TextPrimaryDark,
+    onSurfaceVariant = PmsTokens.TextSecondaryDark,
 )
 
 private val LightColors: ColorScheme = lightColorScheme(
-    primary = Color(0xFF385E00),
-    onPrimary = Color.White,
-    background = Color(0xFFF6F7F2),
-    surface = Color.White,
-    surfaceVariant = Color(0xFFE6EAE2),
-    onSurface = Color(0xFF171A17),
-    onSurfaceVariant = Color(0xFF555D56),
+    primary = PmsTokens.AccentLight,
+    onPrimary = PmsTokens.SurfaceLight,
+    background = PmsTokens.CanvasLight,
+    surface = PmsTokens.SurfaceLight,
+    surfaceVariant = PmsTokens.RaisedLight,
+    outline = PmsTokens.BorderLight,
+    error = PmsTokens.DeleteLight,
+    onSurface = PmsTokens.TextPrimaryLight,
+    onSurfaceVariant = PmsTokens.TextSecondaryLight,
 )
 
 @Composable

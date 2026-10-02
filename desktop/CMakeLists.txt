@@ -29,3 +29,15 @@ set_target_properties(phone_memory_slider PROPERTIES
   MACOSX_BUNDLE TRUE
 )
 
+install(TARGETS phone_memory_slider
+  BUNDLE DESTINATION .
+  RUNTIME DESTINATION bin
+)
+
+qt_generate_deploy_qml_app_script(
+  TARGET phone_memory_slider
+  OUTPUT_SCRIPT deploy_script
+  NO_TRANSLATIONS
+  NO_UNSUPPORTED_PLATFORM_ERROR
+)
+install(SCRIPT ${deploy_script})

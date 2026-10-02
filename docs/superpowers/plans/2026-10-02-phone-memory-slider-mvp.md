@@ -87,8 +87,7 @@
 
 **Interfaces:** Keep Figma variables, QML tokens, and documentation names aligned; build core on all desktop runners and Android on Linux.
 
-- [ ] Create the Figma foundations/components/flow file from the approved design system.
-- [ ] Add token consistency and no-external-endpoint checks.
-- [ ] Add Windows, macOS, Linux, and Android CI jobs.
-- [ ] Run all locally available tests and record unavailable SDK verification separately.
-
+- [x] Create the Figma foundations/components/flow file from the approved design system.
+- [x] Add token consistency and no-external-endpoint checks.
+- [x] Add Windows, macOS, Linux, and Android CI jobs.
+- [x] Run all locally available tests and record unavailable SDK verification separately.
