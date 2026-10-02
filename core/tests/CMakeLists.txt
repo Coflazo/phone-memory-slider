@@ -2,6 +2,7 @@ add_executable(pms_core_tests
   test_main.cpp
   fixture_catalog_tests.cpp
   ranking_tests.cpp
+  review_session_tests.cpp
   review_queue_tests.cpp
 )
 
