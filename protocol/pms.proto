@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package pms.protocol.v1;
+
+option java_package = "org.phonememoryslider.protocol.v1";
+option java_multiple_files = true;
+
+enum PermissionCoverage {
+  PERMISSION_COVERAGE_UNSPECIFIED = 0;
+  PERMISSION_COVERAGE_DENIED = 1;
+  PERMISSION_COVERAGE_PARTIAL = 2;
+  PERMISSION_COVERAGE_FULL = 3;
+}
+
+message Capabilities {
+  uint32 protocol_version = 1;
+  string device_id = 2;
+  string device_name = 3;
+  PermissionCoverage coverage = 4;
+  bool supports_favorites = 5;
+  bool supports_recoverable_trash = 6;
+}
+
+message CatalogPageRequest {
+  string cursor = 1;
+  uint32 limit = 2;
+}
+
+message CatalogAsset {
+  string asset_id = 1;
+  uint64 bytes = 2;
+  string mime_type = 3;
+  uint64 modified_epoch_ms = 4;
+  uint32 width = 5;
+  uint32 height = 6;
+  uint64 duration_ms = 7;
+  bool favorite = 8;
+}
+
+message CatalogPage {
+  uint64 revision = 1;
+  repeated CatalogAsset assets = 2;
+  string next_cursor = 3;
+  bool complete = 4;
+}
+
+message ProxyRequest {
+  string asset_id = 1;
+  uint32 max_edge = 2;
+  repeated uint64 video_frame_ms = 3;
+}
+
+message MediaChunk {
+  string request_id = 1;
+  string asset_id = 2;
+  uint64 offset = 3;
+  bytes data = 4;
+  bytes sha256 = 5;
+  bool complete = 6;
+}
+
+message TrashBatchPrepare {
+  repeated string asset_ids = 1;
+}
+
+message TrashBatchPrepared {
+  string token = 1;
+  repeated string asset_ids = 2;
+  uint64 total_bytes = 3;
+}
+
+message TrashBatchCommit {
+  string token = 1;
+}
+
+message TrashBatchResult {
+  string token = 1;
+  repeated string trashed_ids = 2;
+  repeated string failed_ids = 3;
+  bool user_cancelled = 4;
+}
+
+message PermissionChanged {
+  PermissionCoverage coverage = 1;
+  uint64 accessible_asset_count = 2;
+}
+
+message Progress {
+  string operation_id = 1;
+  uint64 completed = 2;
+  uint64 total = 3;
+}
+
