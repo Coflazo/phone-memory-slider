@@ -16,6 +16,7 @@ else()
 endif()
 
 add_subdirectory(core)
+add_subdirectory(tools)
 
 if(PMS_BUILD_DESKTOP)
   find_package(Qt6 6.8 QUIET COMPONENTS Quick QuickControls2 Multimedia)
