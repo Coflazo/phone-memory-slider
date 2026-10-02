@@ -1,0 +1,17 @@
+.worktrees/
+.superpowers/
+.tools/
+build/
+out/
+.cache/
+.idea/
+.vscode/
+.gradle/
+local.properties
+*.user
+*.suo
+*.log
+*.db
+*.db-shm
+*.db-wal
+
