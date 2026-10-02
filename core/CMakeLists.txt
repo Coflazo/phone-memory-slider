@@ -1,0 +1,6 @@
+add_library(pms_core STATIC
+  src/ranking.cpp
+  src/review_queue.cpp
+)
+
+target_include_directories(pms_core PUBLIC include)
