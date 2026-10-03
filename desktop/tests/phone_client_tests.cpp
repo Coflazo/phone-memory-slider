@@ -102,10 +102,15 @@ private:
                           : status == 403 ? QByteArrayLiteral("Forbidden")
                           : status == 409 ? QByteArrayLiteral("Conflict")
                                           : QByteArrayLiteral("Not Found");
+        const auto content_range = status == 206
+                                       ? QByteArrayLiteral("Content-Range: bytes 0-") +
+                                             QByteArray::number(body.size() - 1) + '/' + QByteArray::number(body.size()) +
+                                             QByteArrayLiteral("\r\n")
+                                       : QByteArray{};
         socket->write(QByteArrayLiteral("HTTP/1.1 ") + QByteArray::number(status) + ' ' + reason +
                       QByteArrayLiteral("\r\nContent-Type: ") + type +
                       QByteArrayLiteral("\r\nContent-Length: ") + QByteArray::number(body.size()) +
-                      QByteArrayLiteral("\r\nConnection: close\r\n\r\n") + body);
+                      QByteArrayLiteral("\r\n") + content_range + QByteArrayLiteral("Connection: close\r\n\r\n") + body);
         socket->disconnectFromHost();
     }
 
