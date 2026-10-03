@@ -259,8 +259,9 @@ void PhoneClient::fetchContent(
     const QStorageInfo storage{QFileInfo{output_path}.absolutePath()};
     if (token_.isEmpty() || pinned_digest_.isEmpty() || asset_id.isEmpty() || asset_id.size() > 512 ||
         total_bytes == 0 || total_bytes > static_cast<std::uint64_t>(std::numeric_limits<qint64>::max()) ||
-        output_path.isEmpty() || !storage.isValid() || storage.isReadOnly() ||
-        static_cast<std::uint64_t>(storage.bytesAvailable()) < total_bytes + 64ULL * 1024ULL * 1024ULL) {
+        output_path.isEmpty() ||
+        (storage.isValid() && storage.bytesAvailable() >= 0 &&
+         static_cast<std::uint64_t>(storage.bytesAvailable()) < total_bytes + 64ULL * 1024ULL * 1024ULL)) {
         fail(QStringLiteral("This video cannot be cached safely on the available local disk"));
         return;
     }
