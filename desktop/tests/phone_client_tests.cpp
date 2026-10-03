@@ -16,12 +16,14 @@ namespace {
 class TlsPhoneFixture final : public QObject {
 public:
     TlsPhoneFixture() {
-        QFile identity_file{QFINDTESTDATA("fixtures/test-identity.p12")};
-        QSslKey key;
-        if (!identity_file.open(QIODevice::ReadOnly) ||
-            !QSslCertificate::importPkcs12(&identity_file, &key, &certificate_, nullptr,
-                                           QByteArrayLiteral("test-only")) ||
-            certificate_.isNull() || key.isNull()) {
+        QFile certificate_file{QFINDTESTDATA("fixtures/test-certificate.der")};
+        QFile key_file{QFINDTESTDATA("fixtures/test-key.der")};
+        if (!certificate_file.open(QIODevice::ReadOnly) || !key_file.open(QIODevice::ReadOnly)) {
+            qFatal("TLS fixture identity is missing");
+        }
+        certificate_ = QSslCertificate{&certificate_file, QSsl::Der};
+        const QSslKey key{&key_file, QSsl::Rsa, QSsl::Der, QSsl::PrivateKey};
+        if (certificate_.isNull() || key.isNull()) {
             qFatal("TLS fixture identity is invalid");
         }
         auto configuration = QSslConfiguration::defaultConfiguration();
