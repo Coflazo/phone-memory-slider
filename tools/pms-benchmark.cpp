@@ -21,7 +21,7 @@ int main() {
         } else if (index < 50) {
             label = index % 2 == 0 ? pms::PreferenceLabel::Keep : pms::PreferenceLabel::Delete;
         }
-        examples.push_back({pms::FixedEmbedding{{first, second}}, label});
+        examples.push_back({pms::FixedEmbedding{first, second}, label});
     }
 
     const auto started = std::chrono::steady_clock::now();

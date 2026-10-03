@@ -6,7 +6,7 @@
 namespace {
 
 pms::FixedEmbedding embedding(const float first, const float second = 0.0F) {
-    return pms::FixedEmbedding{{first, second}};
+    return pms::FixedEmbedding{first, second};
 }
 
 }  // namespace

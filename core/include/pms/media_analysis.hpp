@@ -43,7 +43,7 @@ struct MediaObservation {
 
 struct AnalysisResult {
     AssetFeatures features;
-    std::vector<ReasonCode> reasons;
+    std::vector<ReasonCode> reasons{};
 
     [[nodiscard]] bool has_reason(ReasonCode reason) const noexcept;
 };

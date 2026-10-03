@@ -7,12 +7,12 @@
 
 void run_media_analysis_tests() {
     {
-        const pms::FixedEmbedding embedding{{
+        const pms::FixedEmbedding embedding{
             -1.0F,
             0.25F,
             2.0F,
             std::numeric_limits<float>::quiet_NaN(),
-        }};
+        };
         pms_check(embedding[0] == 0.0F, "embedding clamps negative values");
         pms_check(embedding[1] == 0.25F, "embedding preserves normalized values");
         pms_check(embedding[2] == 1.0F, "embedding clamps values above one");
@@ -26,23 +26,23 @@ void run_media_analysis_tests() {
     {
         std::vector<pms::MediaObservation> observations{
             {.asset_id = "favorite-original",
-             .embedding = pms::FixedEmbedding{{0.9F}},
+             .embedding = pms::FixedEmbedding{0.9F},
              .perceptual_hash = 42,
              .content_digest = "same",
              .storage_benefit = 0.3F,
              .favorite = true},
             {.asset_id = "duplicate-copy",
-             .embedding = pms::FixedEmbedding{{0.9F}},
+             .embedding = pms::FixedEmbedding{0.9F},
              .perceptual_hash = 42,
              .content_digest = "same",
              .storage_benefit = 0.3F},
             {.asset_id = "near-copy",
-             .embedding = pms::FixedEmbedding{{0.8F}},
+             .embedding = pms::FixedEmbedding{0.8F},
              .perceptual_hash = 42,
              .content_digest = "different",
              .storage_benefit = 0.2F},
             {.asset_id = "kept",
-             .embedding = pms::FixedEmbedding{{0.7F}},
+             .embedding = pms::FixedEmbedding{0.7F},
              .perceptual_hash = 7,
              .content_digest = "kept",
              .blur = 1.0F,

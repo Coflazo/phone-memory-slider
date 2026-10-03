@@ -26,9 +26,9 @@ struct ReviewItem {
     AssetFeatures asset;
     MediaKind media_kind{MediaKind::Photo};
     std::uint64_t bytes{};
-    std::string display_name;
-    std::vector<ReasonCode> reasons;
-    std::string preview_uri;
+    std::string display_name{};
+    std::vector<ReasonCode> reasons{};
+    std::string preview_uri{};
 };
 
 class ReviewSession final {

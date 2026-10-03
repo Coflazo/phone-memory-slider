@@ -24,7 +24,7 @@ private slots:
              .mimeType = QStringLiteral("image/jpeg"),
              .bytes = 100,
              .favorite = true,
-             .embedding = pms::FixedEmbedding{{0.25F, 0.75F}},
+             .embedding = pms::FixedEmbedding{0.25F, 0.75F},
              .perceptualHash = 42,
              .blurProblem = 0.2F,
              .keepScore = 0.9F,
@@ -33,7 +33,7 @@ private slots:
              .mimeType = QStringLiteral("video/mp4"),
              .bytes = 900,
              .durationMs = 4'000,
-             .embedding = pms::FixedEmbedding{{0.8F, 0.1F}},
+             .embedding = pms::FixedEmbedding{0.8F, 0.1F},
              .decision = QStringLiteral("delete")},
         };
         QVERIFY2(
