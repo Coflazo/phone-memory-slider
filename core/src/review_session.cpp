@@ -63,9 +63,12 @@ std::uint64_t ReviewSession::pending_delete_bytes() const noexcept {
     return queue_.pending_delete_bytes();
 }
 
+std::size_t ReviewSession::pending_delete_count() const noexcept {
+    return queue_.pending_delete_count();
+}
+
 TrashBatch ReviewSession::prepare_trash_batch() const {
     return queue_.prepare_trash_batch();
 }
 
 }  // namespace pms
-

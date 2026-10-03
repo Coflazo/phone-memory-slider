@@ -6,22 +6,9 @@
 #include <vector>
 
 namespace pms::desktop {
-namespace {
-
-std::vector<ReviewItem> fixture_items() {
-    return {
-        {{"city-duplicate", 0.96F, 0.18F, 0.42F, false, false}, MediaKind::Photo, 4'820'000, "Night walk", {ReasonCode::NearDuplicate}, "qrc:/qt/qml/PhoneMemorySlider/resources/fixture-city.svg"},
-        {{"lake-blur", 0.88F, 0.44F, 0.30F, false, false}, MediaKind::Photo, 3'460'000, "Lake at dusk", {ReasonCode::Blurry}, "qrc:/qt/qml/PhoneMemorySlider/resources/fixture-lake.svg"},
-        {{"screen-old", 0.78F, 0.12F, 0.08F, false, false}, MediaKind::Photo, 780'000, "Old confirmation", {ReasonCode::ScreenCapture}, "qrc:/qt/qml/PhoneMemorySlider/resources/fixture-screen.svg"},
-        {{"clip-large", 0.63F, 0.20F, 1.00F, false, false}, MediaKind::Video, 842'000'000, "Concert clip", {ReasonCode::LargeVideo}, "qrc:/qt/qml/PhoneMemorySlider/resources/fixture-city.svg"},
-        {{"favorite", 0.91F, 0.98F, 0.70F, true, false}, MediaKind::Photo, 5'200'000, "Favorite", {ReasonCode::LowPersonalMatch}, "qrc:/qt/qml/PhoneMemorySlider/resources/fixture-lake.svg"},
-    };
-}
-
-}  // namespace
 
 ReviewDeckModel::ReviewDeckModel(QObject* parent)
-    : QAbstractListModel(parent), session_(fixture_items()) {}
+    : QAbstractListModel(parent), session_(std::vector<ReviewItem>{}) {}
 
 int ReviewDeckModel::rowCount(const QModelIndex& parent) const {
     return parent.isValid() || !session_.current().has_value() ? 0 : 1;
@@ -45,6 +32,9 @@ QVariant ReviewDeckModel::data(const QModelIndex& index, const int role) const {
     case MediaKindRole:
         return current->media_kind == MediaKind::Video ? QStringLiteral("video") : QStringLiteral("photo");
     case PreviewUrlRole:
+        if (preview_asset_id_ == QString::fromStdString(current->asset.asset_id) && preview_override_.isValid()) {
+            return preview_override_;
+        }
         return QUrl{QString::fromStdString(current->preview_uri)};
     default:
         return {};
@@ -70,8 +60,55 @@ QString ReviewDeckModel::pendingBytesText() const {
     return formatBytes(session_.pending_delete_bytes());
 }
 
+int ReviewDeckModel::pendingCount() const noexcept {
+    return static_cast<int>(session_.pending_delete_count());
+}
+
 bool ReviewDeckModel::complete() const noexcept {
     return session_.remaining() == 0;
+}
+
+QString ReviewDeckModel::currentAssetId() const {
+    const auto current = session_.current();
+    return current.has_value() ? QString::fromStdString(current->asset.asset_id) : QString{};
+}
+
+TrashBatch ReviewDeckModel::pendingTrashBatch() const {
+    return session_.prepare_trash_batch();
+}
+
+void ReviewDeckModel::loadItems(std::vector<ReviewItem> items) {
+    beginResetModel();
+    session_ = ReviewSession{std::move(items)};
+    preview_asset_id_.clear();
+    preview_override_.clear();
+    endResetModel();
+    emit summaryChanged();
+    emit currentChanged();
+}
+
+void ReviewDeckModel::setCurrentPreview(const QString& asset_id, const QUrl& url) {
+    if (asset_id != currentAssetId() || !url.isValid()) {
+        return;
+    }
+    preview_asset_id_ = asset_id;
+    preview_override_ = url;
+    if (rowCount() == 1) {
+        const auto model_index = index(0);
+        emit dataChanged(model_index, model_index, {PreviewUrlRole});
+    }
+}
+
+void ReviewDeckModel::clearCurrentPreview() {
+    if (!preview_override_.isValid()) {
+        return;
+    }
+    preview_asset_id_.clear();
+    preview_override_.clear();
+    if (rowCount() == 1) {
+        const auto model_index = index(0);
+        emit dataChanged(model_index, model_index, {PreviewUrlRole});
+    }
 }
 
 void ReviewDeckModel::deleteCurrent() {
@@ -92,6 +129,7 @@ void ReviewDeckModel::undo() {
     endResetModel();
     if (changed) {
         emit summaryChanged();
+        emit currentChanged();
     }
 }
 
@@ -100,7 +138,10 @@ void ReviewDeckModel::applyDecision(const Decision decision) {
     const auto changed = session_.decide_current(decision);
     endResetModel();
     if (changed) {
+        preview_asset_id_.clear();
+        preview_override_.clear();
         emit summaryChanged();
+        emit currentChanged();
     }
 }
 
@@ -132,4 +173,3 @@ QString ReviewDeckModel::reasonLabel(const ReasonCode reason) {
 }
 
 }  // namespace pms::desktop
-

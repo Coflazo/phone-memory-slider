@@ -4,16 +4,20 @@ import QtQuick.Controls
 
 QtObject {
     readonly property bool darkMode: Application.styleHints.colorScheme !== Qt.ColorScheme.Light
-    readonly property color canvas: darkMode ? "#0B0D10" : "#F6F7F9"
-    readonly property color surface: darkMode ? "#12161B" : "#FFFFFF"
-    readonly property color raised: darkMode ? "#181D24" : "#EEF1F5"
-    readonly property color border: darkMode ? "#2A313B" : "#D8DEE7"
-    readonly property color textPrimary: darkMode ? "#F3F5F7" : "#15181D"
-    readonly property color textSecondary: darkMode ? "#A9B0BA" : "#5E6672"
-    readonly property color accent: darkMode ? "#6B7CFF" : "#4F63E8"
-    readonly property color keep: darkMode ? "#46C987" : "#218A55"
-    readonly property color remove: darkMode ? "#FF5C67" : "#C73544"
-    readonly property color warning: darkMode ? "#F4B860" : "#9A6500"
+    readonly property color canvas: darkMode ? "#10100E" : "#F2F0EA"
+    readonly property color surface: darkMode ? "#191915" : "#FBFAF6"
+    readonly property color raised: darkMode ? "#25241E" : "#E7E3D9"
+    readonly property color border: darkMode ? "#3B3930" : "#CFC8B8"
+    readonly property color textPrimary: darkMode ? "#F2F0E8" : "#171712"
+    readonly property color textSecondary: darkMode ? "#AAA79B" : "#666257"
+    readonly property color accent: "#FF5A36"
+    readonly property color keep: darkMode ? "#B9D27B" : "#52711F"
+    readonly property color remove: darkMode ? "#FF7658" : "#BD3216"
+    readonly property color warning: darkMode ? "#F2C15B" : "#8C6200"
+    readonly property color cool: darkMode ? "#9DBCF6" : "#315EAF"
+    readonly property string displayFont: "Geist"
+    readonly property string bodyFont: "Geist"
+    readonly property string monoFont: "Geist Mono"
     readonly property int immediateDuration: 90
     readonly property int controlDuration: 180
     readonly property int expressiveDuration: 420

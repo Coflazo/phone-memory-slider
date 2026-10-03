@@ -1,69 +1,53 @@
 # Phone Memory Slider
 
-Phone Memory Slider is a local-only gallery cleanup prototype. An Android companion exposes user-authorized media to a cross-platform Qt desktop app; the desktop ranks likely cleanup candidates and presents them as a keyboard- and swipe-driven review deck. Nothing is deleted automatically, and favorites are protected again when the final trash batch is created.
+Phone Memory Slider is a local-only Android-to-desktop gallery cleanup beta. The Android companion exposes only media the user has authorized, the Qt desktop learns a private preference model from favorites, ranks likely cleanup candidates, and presents photos and videos as an undoable swipe deck. Nothing moves until Android shows its recoverable system-trash confirmation.
 
-> Current status: production-shaped MVP foundation. Ranking, review state, safety rules, protocol, a fixture-backed animated desktop flow, and the Android MediaStore/permission/trash scaffolds are implemented. The authenticated device transport and on-device gallery-to-desktop wiring are the next integration milestone.
+## Implemented beta
 
-## What is here
+- Authenticated local HTTPS session with a fresh six-digit pairing code and certificate pinning
+- Resumable, revision-bound MediaStore catalog pages of at most 1,000 items
+- Bounded photo thumbnails and chunked video transfer into a temporary desktop cache
+- SQLite catalog persistence with non-destructive schema migration
+- Desktop-only fixed visual features, duplicate/quality signals, and preference learning
+- Ranked photo/video review with pointer, keyboard, buttons, undo, and reduced motion
+- Favorite protection in ranking, trash preparation, and the final Android recheck
+- Two-phase, replay-safe recoverable-trash request and result polling
+- Windows-first Qt package with macOS/Linux CI coverage and an Android companion APK job
 
-- Deterministic C++23 ranking and reversible review queue
-- 250,000-item benchmark fixture
-- Qt Quick desktop review deck with spring motion, keyboard controls, reduced motion, and system light/dark themes
-- Android 11+ companion scaffold with partial-gallery awareness and one system trash confirmation
-- Versioned local transport contract in [protocol/pms.proto](protocol/pms.proto)
-- Shared design tokens in [design/tokens.json](design/tokens.json)
-- Product decisions in [PRODUCT.md](PRODUCT.md) and interaction rules in [DESIGN.md](DESIGN.md)
+No account, cloud service, telemetry, remote inference, face identity, or permanent-delete fallback is present.
 
-Design source: [Phone Memory Slider in Figma](https://www.figma.com/design/hVRuncNTA1D6rBb0zYT3CF)
+## Use
 
-## Safety and privacy
-
-- No accounts, cloud APIs, telemetry, external inference, or internet endpoints in runtime source.
-- Favorites and explicitly kept items cannot enter a trash batch.
-- Delete choices remain queued and undoable until the Android system confirmation.
-- The model uses face presence only; it does not identify or cluster people.
-- Cloud-only, locked, secure-folder, and otherwise unavailable media stay out of scope and must be reported to the user.
-
-## Build the verified core
-
-Requirements: CMake 3.24+ and a C++23 compiler.
-
-```powershell
-cmake -S . -B build -DPMS_BUILD_DESKTOP=OFF
-cmake --build build --config Release --parallel
-ctest --test-dir build -C Release --output-on-failure
-./build/tools/Release/pms_benchmark.exe
-```
-
-On single-configuration generators, the benchmark is `./build/tools/pms_benchmark`.
+See [User Guide](docs/USER_GUIDE.md), [Privacy](docs/PRIVACY.md), and [Release Checklist](docs/RELEASE_CHECKLIST.md). The editable visual source is [Phone Memory Slider in Figma](https://www.figma.com/design/hVRuncNTA1D6rBb0zYT3CF).
 
 ## Build the desktop app
 
-Install Qt 6.8+ with Quick, Quick Controls 2, and Multimedia, then run:
+Requirements: CMake 3.24+, a C++23 compiler, and Qt 6.8+ with Quick, Quick Controls 2, Network, SQL, Concurrent, and Multimedia.
 
 ```powershell
 cmake -S . -B build -DPMS_BUILD_DESKTOP=ON
 cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
+cpack --config build/CPackConfig.cmake -G ZIP
 ```
-
-The app currently uses generated fixture media, so its interaction and motion can be reviewed before live device transport is connected.
 
 ## Build the Android companion
 
-Requirements: JDK 17, Android SDK 36, and Gradle 8.13.
+Requirements: JDK 17, Android SDK 36 with accepted SDK licenses, and Gradle 8.13.
 
 ```powershell
 gradle --project-dir android-companion testDebugUnitTest assembleDebug
 ```
 
-The repository intentionally does not include generated Gradle wrapper binaries. CI pins the Gradle version and builds the companion.
+The repository intentionally excludes generated Gradle wrapper binaries. CI pins Gradle 8.13 and publishes the debug APK as a workflow artifact.
 
-## Remaining integration work
+## Verify the ranking budget
 
-- Authenticated local HTTPS transport and mDNS discovery over Wi-Fi or USB tethering
-- Resumable MediaStore catalog/proxy transfer into the desktop client
-- Durable SQLite catalog and real thumbnail/video playback
-- Local embedding inference and incremental preference updates
-- Platform signing and installer polish
+```powershell
+cmake -S . -B build-core -DPMS_BUILD_DESKTOP=OFF
+cmake --build build-core --config Release --parallel
+ctest --test-dir build-core -C Release --output-on-failure
+./build-core/tools/Release/pms_benchmark.exe
+```
 
-Licensed under Apache-2.0. See [LICENSE](LICENSE).
+Licensed under Apache-2.0. Geist font notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

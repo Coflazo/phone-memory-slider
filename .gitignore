@@ -3,6 +3,8 @@
 .tools/
 build/
 build-*/
+_CPack_Packages/
+PhoneMemorySlider-*.zip
 out/
 .cache/
 .idea/

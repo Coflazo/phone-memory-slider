@@ -40,6 +40,7 @@ public:
     [[nodiscard]] bool decide_current(Decision decision);
     [[nodiscard]] bool undo();
     [[nodiscard]] std::uint64_t pending_delete_bytes() const noexcept;
+    [[nodiscard]] std::size_t pending_delete_count() const noexcept;
     [[nodiscard]] TrashBatch prepare_trash_batch() const;
 
 private:

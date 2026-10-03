@@ -1,11 +1,14 @@
 package app.pms.companion
 
 import android.Manifest
+import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -42,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -81,6 +85,16 @@ private fun CompanionRoute(catalog: MediaCatalogSource, pairing: ForegroundPairi
     var stage by remember(coverage) {
         mutableStateOf(if (coverage == PermissionCoverage.Denied) Stage.Permissions else Stage.Pairing)
     }
+    val pendingTrash by TrashConfirmationBus.pending.collectAsState()
+    val trashLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        TrashConfirmationBus.finish(it.resultCode == Activity.RESULT_OK)
+    }
+    LaunchedEffect(pendingTrash?.token) {
+        pendingTrash?.let {
+            stage = Stage.Trash
+            trashLauncher.launch(IntentSenderRequest.Builder(it.prepared.confirmation.intentSender).build())
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -116,7 +130,7 @@ private fun CompanionRoute(catalog: MediaCatalogSource, pairing: ForegroundPairi
                     )
                     Stage.Connected -> ConnectedScreen(
                         coverage = coverage,
-                        pairingCode = (pairingState as? PairingState.Advertising)?.code.orEmpty(),
+                        pairingState = pairingState,
                         onPreviewTrash = { stage = Stage.Trash },
                         onStop = {
                             pairing.stop()
@@ -177,10 +191,21 @@ private fun PairingScreen(coverage: PermissionCoverage, onStart: () -> Unit) {
 @Composable
 private fun ConnectedScreen(
     coverage: PermissionCoverage,
-    pairingCode: String,
+    pairingState: PairingState,
     onPreviewTrash: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val code = when (pairingState) {
+        is PairingState.Advertising -> pairingState.code
+        is PairingState.Connected -> pairingState.code
+        else -> null
+    }
+    val address = when (pairingState) {
+        is PairingState.Advertising -> pairingState.addresses.firstOrNull()?.let { "$it:${pairingState.port}" }
+        is PairingState.Connected -> pairingState.addresses.firstOrNull()?.let { "$it:${pairingState.port}" }
+        else -> null
+    }
+    val desktopName = (pairingState as? PairingState.Connected)?.desktopName
     val pulse = rememberInfiniteTransition(label = "connection-pulse")
     val scale by pulse.animateFloat(
         initialValue = 0.94f,
@@ -189,9 +214,14 @@ private fun ConnectedScreen(
         label = "connection-scale",
     )
     StageLayout(
-        eyebrow = "LOCAL SESSION ACTIVE",
-        title = "The desktop can now read ${if (coverage == PermissionCoverage.Full) "your gallery" else "your selection"}.",
-        body = "Pair with ${pairingCode.ifEmpty { "the code in your notification" }}. Android will always ask again before anything moves to trash.",
+        eyebrow = if (desktopName == null) "LOCAL SESSION READY" else "CONNECTED LOCALLY",
+        title = desktopName?.let { "$it can review ${if (coverage == PermissionCoverage.Full) "your gallery" else "your selection"}." }
+            ?: "Enter the endpoint and code on your desktop.",
+        body = when (pairingState) {
+            PairingState.Starting -> "Creating the encrypted local session…"
+            is PairingState.Failure -> "${pairingState.message}. End the session and try again."
+            else -> "${address ?: "Finding a local address"}\nCode ${code ?: "—— ——"}\nAndroid will ask again before anything moves to trash."
+        },
         signal = {
             Box(
                 Modifier.scale(scale).alpha(0.75f).background(MaterialTheme.colorScheme.primary, CircleShape)
@@ -218,7 +248,7 @@ private fun TrashConfirmationScreen(onBack: () -> Unit) {
         ) {
             Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Example batch", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("24 items · 1.8 GB", fontWeight = FontWeight.Bold)
+                Text("Waiting for desktop batch", fontWeight = FontWeight.Bold)
             }
         }
         PrimaryButton("Back to connection", onBack)
@@ -272,6 +302,9 @@ private fun requiredPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         add(Manifest.permission.READ_MEDIA_IMAGES)
         add(Manifest.permission.READ_MEDIA_VIDEO)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+        }
         add(Manifest.permission.POST_NOTIFICATIONS)
     } else {
         add(Manifest.permission.READ_EXTERNAL_STORAGE)

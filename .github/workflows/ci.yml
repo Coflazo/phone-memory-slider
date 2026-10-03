@@ -55,6 +55,8 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
       - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: ctest --test-dir build --output-on-failure
       - name: Package
         run: cpack --config build/CPackConfig.cmake -G ZIP
@@ -73,10 +75,14 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
       - name: Test and assemble companion
         working-directory: android-companion
         run: gradle testDebugUnitTest assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phone-memory-slider-android-debug
+          path: android-companion/app/build/outputs/apk/debug/app-debug.apk

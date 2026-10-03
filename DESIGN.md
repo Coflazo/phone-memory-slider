@@ -4,7 +4,7 @@
 
 ## Direction
 
-Operate mode. The application is quiet, precise, and familiar outside the review deck. The deck is the signature moment: full-bleed media, spring physics, restrained depth, and clear evidence for each recommendation.
+Local film-lab mode. The application is warm, precise, and quiet outside the review deck. The deck is the signature moment: full-bleed media, spring physics, restrained depth, and clear evidence for each recommendation.
 
 ## Foundations
 
@@ -18,16 +18,17 @@ Operate mode. The application is quiet, precise, and familiar outside the review
 
 | Token | Dark | Light |
 |---|---:|---:|
-| canvas | `#0B0D10` | `#F6F7F9` |
-| surface | `#12161B` | `#FFFFFF` |
-| raised | `#181D24` | `#EEF1F5` |
-| border | `#2A313B` | `#D8DEE7` |
-| text-primary | `#F3F5F7` | `#15181D` |
-| text-secondary | `#A9B0BA` | `#5E6672` |
-| accent | `#6B7CFF` | `#4F63E8` |
-| keep | `#46C987` | `#218A55` |
-| delete | `#FF5C67` | `#C73544` |
-| warning | `#F4B860` | `#9A6500` |
+| canvas | `#10100E` | `#F2F0EA` |
+| surface | `#191915` | `#FBFAF6` |
+| raised | `#25241E` | `#E7E3D9` |
+| border | `#3B3930` | `#CFC8B8` |
+| text-primary | `#F2F0E8` | `#171712` |
+| text-secondary | `#AAA79B` | `#666257` |
+| accent | `#FF5A36` | `#FF5A36` |
+| keep | `#B9D27B` | `#52711F` |
+| delete | `#FF7658` | `#BD3216` |
+| warning | `#F2C15B` | `#8C6200` |
+| cool | `#9DBCF6` | `#315EAF` |
 
 ## Interaction Rules
 
@@ -36,4 +37,3 @@ Operate mode. The application is quiet, precise, and familiar outside the review
 - Video starts muted and exposes play, mute, and scrub controls without stealing swipe input.
 - Reduced motion replaces spatial transitions with opacity changes under 180 ms.
 - Recommendation strength is qualitative. Never present an uncalibrated percentage as probability.
-

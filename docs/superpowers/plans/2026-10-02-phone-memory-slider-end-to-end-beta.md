@@ -4,7 +4,7 @@
 
 **Goal:** Turn the fixture-backed foundation into a verified local Android-to-desktop beta that catalogs real authorized media, learns preference locally, reviews photos and videos, and requests recoverable Android trash.
 
-**Architecture:** The Android foreground service owns MediaStore access, an ephemeral authenticated TLS session, mDNS advertisement, bounded thumbnail/content streaming, and Android's trash confirmation. The Qt desktop pins the presented certificate with the six-digit code, synchronizes metadata and fixed visual features into SQLite, trains the C++ preference model off the UI thread, and drives the existing review queue. The protobuf file remains the canonical semantic schema; beta HTTP endpoints use a versioned JSON representation for simple Android/Qt interoperability.
+**Architecture:** The Android foreground service owns MediaStore access, an ephemeral authenticated TLS session, mDNS advertisement, bounded thumbnail/content streaming, and Android's trash confirmation. The Qt desktop authenticates with a fresh six-digit session code, pins the accepted certificate, synchronizes metadata and fixed visual features into SQLite, trains the C++ preference model off the UI thread, and drives the existing review queue. The protobuf file remains the canonical semantic schema; beta HTTP endpoints use a versioned JSON representation for simple Android/Qt interoperability.
 
 **Tech Stack:** C++23, Qt 6.8 Quick/Network/SQL/Multimedia/Concurrent, Kotlin 2.2, Android MediaStore/Keystore/NSD, Jetpack Compose, CMake/CTest, Gradle/JUnit.
 
@@ -14,7 +14,7 @@
 
 - Android 11+; Windows is the primary desktop, with macOS and Linux build coverage.
 - No account, internet service, telemetry, cloud inference, face identity, or permanent-delete fallback.
-- Pair only over TLS after the user verifies the six-digit certificate fingerprint; reject unauthenticated and oversized requests.
+- Pair only over TLS with a fresh six-digit session code and a five-attempt lockout; reject unauthenticated and oversized requests.
 - Favorites and explicit keeps are protected at ranking, preparation, and Android trash confirmation boundaries.
 - Personal weighting stays disabled until 20 favorites or 30 explicit review labels exist.
 - Catalog pages contain at most 1,000 assets; originals are streamed and not retained by default.
@@ -66,13 +66,13 @@
 - Modify: `PairingForegroundService.kt`, `CompanionBoundaries.kt`, `AndroidManifest.xml`
 
 **Interfaces:**
-- Produces: TLS server on an OS-selected port, certificate-derived six-digit code, `SessionAuthenticator`, `ConnectionRuntime.state`, and `_pms._tcp` advertisement.
+- Produces: TLS server on an OS-selected port, fresh six-digit session code, `SessionAuthenticator`, `ConnectionRuntime.state`, and `_pms._tcp` advertisement.
 - Consumes: Android Keystore identity and the existing foreground pairing session.
 
 - [ ] Write failing JVM tests for header/body limits, malformed requests, constant-time code verification behavior, token rotation, unauthorized routes, and non-local peer rejection.
 - [ ] Run Android unit tests and confirm the new tests fail for missing production types.
 - [ ] Implement the bounded HTTP/1.1 codec, Keystore-backed self-signed TLS identity, session token, local-address enforcement, server lifecycle, and NSD registration.
-- [ ] Update the foreground session/UI state so the phone shows address, port, and the certificate-derived code from the running service.
+- [ ] Update the foreground session/UI state so the phone shows address, port, and the fresh session code from the running service.
 - [ ] Run Android unit tests and assemble the debug APK; expect success.
 - [ ] Commit as `feat: add secure Android pairing service`.
 
@@ -111,9 +111,9 @@
 - Produces: `PhoneClient::{pair,syncCatalog,fetchPreview,fetchContent,prepareTrash,commitTrash,pollTrash}`, desktop-only fixed visual encoding/face-presence detection, SQLite `CatalogStore`, and observable `AppController` stages.
 - Consumes: Task 3 v1 endpoints and Task 1 embedding/model types.
 
-- [ ] Write failing Qt tests against an in-process TLS fixture for correct/wrong certificate codes, token auth, stale-cursor restart, interrupted sync resume, SQLite replacement by revision, and malformed payload rejection.
+- [ ] Write failing Qt tests against an in-process TLS fixture for correct/wrong pairing codes, token auth, stale-cursor restart, interrupted sync resume, SQLite replacement by revision, and malformed payload rejection.
 - [ ] Run desktop tests and confirm failure for missing client/store/controller types.
-- [ ] Implement certificate pinning before ignoring the self-signed error, local-address validation, bounded JSON parsing, cancellable requests, and redacted diagnostics.
+- [ ] Implement certificate pinning for the code-authenticated peer, local-address validation, bounded JSON parsing, cancellable requests, and redacted diagnostics.
 - [ ] Implement the fixed desktop visual encoder and face-presence-only detector, plus a transactional SQLite schema for devices, assets, FP16 embeddings, scores, labels, decisions, and cursors; run decoding/analysis/training through bounded QtConcurrent work.
 - [ ] Run desktop tests plus the core suite; expect zero failures.
 - [ ] Commit as `feat: connect and persist phone galleries`.

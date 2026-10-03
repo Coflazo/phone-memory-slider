@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
 import PhoneMemorySlider
 
 Item {
@@ -70,9 +71,64 @@ Item {
 
                 Image {
                     anchors.fill: parent
+                    visible: mediaKind !== "video"
                     source: previewUrl
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    visible: mediaKind === "video"
+                    color: "#090907"
+                }
+
+                VideoOutput {
+                    id: videoSurface
+                    anchors.fill: parent
+                    visible: mediaKind === "video" && player.source.toString().length > 0
+                    fillMode: VideoOutput.PreserveAspectFit
+                }
+
+                AudioOutput { id: videoAudio; muted: true }
+                MediaPlayer {
+                    id: player
+                    source: mediaKind === "video" ? previewUrl : ""
+                    videoOutput: videoSurface
+                    audioOutput: videoAudio
+                    loops: MediaPlayer.Infinite
+                    onSourceChanged: if (source.toString().length > 0) play()
+                }
+
+                BusyIndicator {
+                    anchors.centerIn: parent
+                    visible: mediaKind === "video" && player.source.toString().length === 0
+                    running: visible
+                    Accessible.name: qsTr("Caching video locally")
+                }
+
+                Row {
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 16
+                    spacing: 8
+                    visible: mediaKind === "video" && player.source.toString().length > 0
+                    Button {
+                        text: player.playbackState === MediaPlayer.PlayingState ? qsTr("Pause") : qsTr("Play")
+                        onClicked: player.playbackState === MediaPlayer.PlayingState ? player.pause() : player.play()
+                        Accessible.name: text + qsTr(" video")
+                    }
+                    Button {
+                        text: videoAudio.muted ? qsTr("Sound off") : qsTr("Sound on")
+                        onClicked: videoAudio.muted = !videoAudio.muted
+                        Accessible.name: videoAudio.muted ? qsTr("Unmute video") : qsTr("Mute video")
+                    }
+                }
+
+                Shortcut {
+                    enabled: mediaKind === "video" && player.source.toString().length > 0
+                    sequence: "Space"
+                    onActivated: player.playbackState === MediaPlayer.PlayingState ? player.pause() : player.play()
                 }
 
                 Rectangle {
@@ -103,11 +159,11 @@ Item {
                             background: Rectangle { color: Theme.raised; radius: 8; border.color: Theme.border }
                         }
                         Item { Layout.fillWidth: true }
-                        Label { text: storageText; color: Theme.textPrimary; font.pixelSize: 15; font.family: "Geist Mono" }
+                        Label { text: storageText; color: Theme.textPrimary; font.pixelSize: 15; font.family: Theme.monoFont }
                     }
                     Label { text: displayName; color: Theme.textPrimary; font.pixelSize: 24; font.weight: Font.DemiBold }
                     Label {
-                        text: mediaKind === "video" ? qsTr("Video plays during review") : qsTr("Swipe left to queue, right to keep")
+                        text: mediaKind === "video" ? qsTr("Video stays local and plays from a temporary cache") : qsTr("Swipe left to queue, right to keep")
                         color: Theme.textSecondary
                         font.pixelSize: 14
                     }
@@ -126,7 +182,7 @@ Item {
         id: exitAnimation
         target: card
         property: "x"
-        duration: root.reducedMotion ? 0 : Theme.expressiveDuration
+        duration: root.reducedMotion ? 0 : Theme.controlDuration
         easing.type: Easing.OutExpo
         onFinished: {
             if (root.exitAction) root.exitAction()
@@ -162,4 +218,3 @@ Item {
         }
     }
 }
-

@@ -2,6 +2,9 @@
 
 #include <QAbstractListModel>
 #include <QString>
+#include <QUrl>
+
+#include <vector>
 
 #include "pms/review_session.hpp"
 
@@ -11,6 +14,7 @@ class ReviewDeckModel final : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int remaining READ remaining NOTIFY summaryChanged)
     Q_PROPERTY(QString pendingBytesText READ pendingBytesText NOTIFY summaryChanged)
+    Q_PROPERTY(int pendingCount READ pendingCount NOTIFY summaryChanged)
     Q_PROPERTY(bool complete READ complete NOTIFY summaryChanged)
 
 public:
@@ -31,7 +35,14 @@ public:
 
     [[nodiscard]] int remaining() const noexcept;
     [[nodiscard]] QString pendingBytesText() const;
+    [[nodiscard]] int pendingCount() const noexcept;
     [[nodiscard]] bool complete() const noexcept;
+    [[nodiscard]] QString currentAssetId() const;
+    [[nodiscard]] TrashBatch pendingTrashBatch() const;
+
+    void loadItems(std::vector<ReviewItem> items);
+    void setCurrentPreview(const QString& asset_id, const QUrl& url);
+    void clearCurrentPreview();
 
     Q_INVOKABLE void deleteCurrent();
     Q_INVOKABLE void keepCurrent();
@@ -40,6 +51,7 @@ public:
 
 signals:
     void summaryChanged();
+    void currentChanged();
 
 private:
     void applyDecision(Decision decision);
@@ -47,7 +59,8 @@ private:
     [[nodiscard]] static QString reasonLabel(ReasonCode reason);
 
     ReviewSession session_;
+    QString preview_asset_id_;
+    QUrl preview_override_;
 };
 
 }  // namespace pms::desktop
-
