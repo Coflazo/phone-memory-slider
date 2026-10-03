@@ -12,15 +12,15 @@
 namespace pms::desktop {
 
 struct CatalogRecord {
-    QString assetId;
-    QString mimeType;
+    QString assetId{};
+    QString mimeType{};
     std::uint64_t bytes{};
     std::uint64_t modifiedEpochMs{};
     int width{};
     int height{};
     std::uint64_t durationMs{};
     bool favorite{};
-    FixedEmbedding embedding;
+    FixedEmbedding embedding{};
     std::uint64_t perceptualHash{};
     float blurProblem{};
     float exposureProblem{};
@@ -28,9 +28,9 @@ struct CatalogRecord {
     float cleanupScore{};
     float keepScore{0.5F};
     float storageScore{};
-    QString reasons;
-    QString label;
-    QString decision;
+    QString reasons{};
+    QString label{};
+    QString decision{};
 };
 
 struct CatalogSyncState {

@@ -468,7 +468,7 @@ void PhoneClient::pollTrash(const QString& preparation_token) {
         result.token = token.toString();
         result.pending = status.toString() == QStringLiteral("pending");
         result.userCancelled = object.value(QStringLiteral("user_cancelled")).toBool(false);
-        for (const auto key : {QStringLiteral("trashed_ids"), QStringLiteral("failed_ids")}) {
+        for (const auto& key : {QStringLiteral("trashed_ids"), QStringLiteral("failed_ids")}) {
             const auto values = object.value(key);
             if (!values.isUndefined() && !values.isArray()) {
                 fail(QStringLiteral("Phone returned an invalid trash result"));
