@@ -169,9 +169,15 @@ private slots:
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         QSignalSpy content{&client, &pms::desktop::PhoneClient::contentReady};
+        QSignalSpy transfer_failed{&client, &pms::desktop::PhoneClient::requestFailed};
         const auto output = directory.filePath(QStringLiteral("video.mp4"));
         client.fetchContent(QStringLiteral("video-a"), 12, output);
-        QVERIFY(content.wait());
+        if (!content.wait()) {
+            const auto message = transfer_failed.isEmpty()
+                                     ? QStringLiteral("Video transfer timed out without an error")
+                                     : transfer_failed.front().front().toString();
+            QFAIL(qPrintable(message));
+        }
         QFile file{output};
         QVERIFY(file.open(QIODevice::ReadOnly));
         QCOMPARE(file.readAll(), QByteArrayLiteral("hello video!"));
