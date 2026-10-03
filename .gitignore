@@ -17,3 +17,13 @@ local.properties
 *.db
 *.db-shm
 *.db-wal
+
+# Hyperframes working output; keep the authored composition and delivery media.
+brag-output/composition/node_modules/
+brag-output/composition/renders/
+brag-output/composition/snapshots/
+brag-output/composition/.hf-tmp/
+brag-output/composition/.hyperframes/
+brag-output/composition/.thumbnails/
+brag-output/composition/AGENTS.md
+brag-output/composition/CLAUDE.md

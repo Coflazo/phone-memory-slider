@@ -1,24 +1,34 @@
 # Phone Memory Slider
 
-Phone Memory Slider is a local-only Android-to-desktop gallery cleanup beta. The Android companion exposes only media the user has authorized, the Qt desktop learns a private preference model from favorites, ranks likely cleanup candidates, and presents photos and videos as an undoable swipe deck. Nothing moves until Android shows its recoverable system-trash confirmation.
+[![CI](https://github.com/Coflazo/phone-memory-slider/actions/workflows/ci.yml/badge.svg)](https://github.com/Coflazo/phone-memory-slider/actions/workflows/ci.yml)
 
-## Implemented beta
+Your camera roll, with an exit.
 
-- Authenticated local HTTPS session with a fresh six-digit pairing code and certificate pinning
-- Resumable, revision-bound MediaStore catalog pages of at most 1,000 items
-- Bounded photo thumbnails and chunked video transfer into a temporary desktop cache
-- SQLite catalog persistence with non-destructive schema migration
-- Desktop-only fixed visual features, duplicate/quality signals, and preference learning
-- Ranked photo/video review with pointer, keyboard, buttons, undo, and reduced motion
-- Favorite protection in ranking, trash preparation, and the final Android recheck
-- Two-phase, replay-safe recoverable-trash request and result polling
-- Windows-first Qt package with macOS/Linux CI coverage and an Android companion APK job
+[![Phone Memory Slider product demo](brag-output/brag.gif)](brag-output/brag.mp4)
 
-No account, cloud service, telemetry, remote inference, face identity, or permanent-delete fallback is present.
+Phone Memory Slider is a local-only Android-to-desktop gallery cleanup beta. It learns from the photos you have marked as favorites, ranks the rest by how likely they are to be clutter, and lets you make the final call with a swipe. Photos and videos stay inside the local session, and Android owns the last recoverable-trash confirmation.
 
-## Use
+## What it does
 
-See [User Guide](docs/USER_GUIDE.md), [Privacy](docs/PRIVACY.md), and [Release Checklist](docs/RELEASE_CHECKLIST.md). The editable visual source is [Phone Memory Slider in Figma](https://www.figma.com/design/hVRuncNTA1D6rBb0zYT3CF).
+- Pairs the Android companion and desktop app over authenticated local HTTPS.
+- Reads only media the user has authorized through Android's media APIs.
+- Builds a private preference model from favorites on the desktop.
+- Ranks likely screenshots, duplicates, low-quality captures, and other cleanup candidates.
+- Reviews photos and playing videos with swipe, keyboard, buttons, and undo.
+- Shows the queued item count and reclaimable storage before anything moves.
+- Hands the final batch to Android's recoverable system trash flow.
+
+## Local means local
+
+There is no account, cloud service, telemetry, remote inference, face identity, or permanent-delete fallback. Pairing uses a short-lived session code, TLS, and certificate pinning. The desktop cache is temporary. Favorites are protected during ranking, queue preparation, and a final phone-side recheck.
+
+The transport and deletion details are documented in [the protocol](docs/protocol.md) and [privacy notes](docs/PRIVACY.md).
+
+## Beta status
+
+The Qt desktop release build and all five desktop/core test executables pass on Windows. The Android scaffold checks pass. The repository's CI builds the C++ core and Qt desktop on Windows, macOS, and Linux, and assembles the Android companion with SDK 36.
+
+Before a release, the Android build and complete pairing-to-trash flow must still be accepted on real phone hardware. iPhone support is not included in this beta.
 
 ## Build the desktop app
 
@@ -28,6 +38,11 @@ Requirements: CMake 3.24+, a C++23 compiler, and Qt 6.8+ with Quick, Quick Contr
 cmake -S . -B build -DPMS_BUILD_DESKTOP=ON
 cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
+```
+
+To create the Windows ZIP package:
+
+```powershell
 cpack --config build/CPackConfig.cmake -G ZIP
 ```
 
@@ -39,9 +54,9 @@ Requirements: JDK 17, Android SDK 36 with accepted SDK licenses, and Gradle 8.13
 gradle --project-dir android-companion testDebugUnitTest assembleDebug
 ```
 
-The repository intentionally excludes generated Gradle wrapper binaries. CI pins Gradle 8.13 and publishes the debug APK as a workflow artifact.
+Generated Gradle wrapper binaries are intentionally excluded. CI pins Gradle 8.13 and uploads the debug APK as a workflow artifact.
 
-## Verify the ranking budget
+## Core-only verification
 
 ```powershell
 cmake -S . -B build-core -DPMS_BUILD_DESKTOP=OFF
@@ -49,5 +64,15 @@ cmake --build build-core --config Release --parallel
 ctest --test-dir build-core -C Release --output-on-failure
 ./build-core/tools/Release/pms_benchmark.exe
 ```
+
+## Project links
+
+- [Editable Figma design](https://www.figma.com/design/hVRuncNTA1D6rBb0zYT3CF)
+- [User guide](docs/USER_GUIDE.md)
+- [Design system](DESIGN.md)
+- [Privacy model](docs/PRIVACY.md)
+- [Local protocol](docs/protocol.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+- [Full product demo](brag-output/brag.mp4)
 
 Licensed under Apache-2.0. Geist font notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

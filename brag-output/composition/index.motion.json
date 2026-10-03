@@ -1,0 +1,17 @@
+{
+  "duration": 24,
+  "maxStaticSec": 2,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#hero-title", "bySec": 0.1 },
+    { "kind": "before", "a": "#hero-title", "b": "#pair-desktop" },
+    { "kind": "before", "a": "#pair-desktop", "b": ".scan-board" },
+    { "kind": "before", "a": ".scan-board", "b": ".review-stage" },
+    { "kind": "before", "a": ".review-stage", "b": ".summary-panel" },
+    { "kind": "staysInFrame", "selector": "#pair-desktop" },
+    { "kind": "staysInFrame", "selector": "#pair-phone" },
+    { "kind": "staysInFrame", "selector": ".scan-board" },
+    { "kind": "staysInFrame", "selector": ".review-stage" },
+    { "kind": "staysInFrame", "selector": ".summary-panel" },
+    { "kind": "keepsMoving", "withinSelector": "#root" }
+  ]
+}

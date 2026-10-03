@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.ttf") format("truetype"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.ttf") format("truetype"); font-weight: 600; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.ttf") format("truetype"); font-weight: 700; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Regular.ttf") format("truetype"); font-weight: 400; }
+      :root {
+        --canvas: #10100e; --surface: #191915; --raised: #25241e; --border: #3b3930;
+        --text: #f2f0e8; --muted: #aaa79b; --faint: #918e85; --accent: #ff5a36;
+        --keep: #b9d27b; --delete: #ff7658; --cool: #9dbcf6;
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; margin: 0; overflow: hidden; background: var(--canvas); color: var(--text); font-family: "Geist", Arial, sans-serif; }
+      #root, .clip, .scene { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; }
+      .scene { background: var(--canvas); }
+      .mono { font-family: "Geist Mono", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+      .eyebrow { color: var(--accent); font-family: "Geist Mono", Consolas, monospace; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; }
+      .brand-mark { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--accent); color: var(--accent); font-family: "Geist Mono", Consolas, monospace; font-size: 15px; }
+      .topbar { position: absolute; z-index: 5; top: 40px; left: 56px; right: 56px; display: flex; align-items: center; justify-content: space-between; }
+      .topbar-brand { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 17px; }
+      .local-pill { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: 14px "Geist Mono", Consolas, monospace; }
+      .local-pill::before { width: 8px; height: 8px; border-radius: 50%; background: var(--keep); content: ""; }
+
+      /* Frame-zero poster */
+      #hero { opacity: 1; }
+      .hero-gallery { position: absolute; inset: 0; }
+      .hero-tile { position: absolute; overflow: hidden; margin: 0; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 28px 70px rgba(0,0,0,.28); }
+      .hero-tile img { width: 100%; height: 100%; object-fit: cover; }
+      .hero-tile.one { top: 118px; left: 92px; width: 390px; height: 390px; transform: rotate(-4deg); }
+      .hero-tile.two { right: 76px; bottom: 64px; width: 430px; height: 430px; transform: rotate(3deg); }
+      .hero-tile.three { right: 230px; top: 92px; width: 250px; height: 250px; transform: rotate(6deg); }
+      .hero-shade { position: absolute; inset: 0; background: rgba(16,16,14,.72); }
+      .hero-copy { position: absolute; top: 50%; left: 50%; width: 940px; transform: translate(-50%,-50%); text-align: center; }
+      .hero-copy h1 { margin: 28px 0 22px; font-size: 88px; font-weight: 600; letter-spacing: -.055em; line-height: .98; }
+      .hero-copy h1 span { display: block; }
+      .hero-copy p { margin: 0 auto; max-width: 680px; color: var(--muted); font-size: 24px; line-height: 1.48; }
+      .hero-proof { display: flex; justify-content: center; gap: 10px; margin-top: 34px; }
+      .proof-chip { padding: 11px 15px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 15px; }
+
+      /* Shared app chrome */
+      .desktop-window { overflow: hidden; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 34px 95px rgba(0,0,0,.38); }
+      .window-bar { display: flex; height: 58px; align-items: center; justify-content: space-between; padding: 0 22px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 15px; }
+      .window-dots { display: flex; gap: 7px; }
+      .window-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+      .phone { position: relative; overflow: hidden; border: 2px solid #4b493e; border-radius: 38px; background: #0e0e0c; box-shadow: 0 34px 95px rgba(0,0,0,.42); }
+      .phone::before { position: absolute; z-index: 4; top: 12px; left: 50%; width: 86px; height: 22px; transform: translateX(-50%); border-radius: 18px; background: #070706; content: ""; }
+      .phone-screen { position: absolute; inset: 10px; overflow: hidden; border-radius: 29px; background: var(--surface); }
+
+      /* Pairing */
+      .pair-layout { position: absolute; inset: 124px 100px 80px; }
+      #pair-desktop { position: absolute; top: 80px; left: 80px; width: 1080px; height: 670px; }
+      .pair-content { display: grid; height: 612px; grid-template-columns: 1fr .82fr; }
+      .pair-message { padding: 90px 74px; border-right: 1px solid var(--border); }
+      .pair-message h2 { margin: 22px 0 20px; max-width: 520px; font-size: 54px; font-weight: 600; letter-spacing: -.045em; line-height: 1.04; }
+      .pair-message p { max-width: 480px; color: var(--muted); font-size: 20px; line-height: 1.5; }
+      .pair-terminal { display: flex; align-items: center; justify-content: center; padding: 50px; background: #141411; }
+      .code-card { width: 370px; padding: 28px; border: 1px solid var(--border); background: var(--raised); }
+      .code-card .label { color: var(--muted); font-size: 14px; }
+      .pair-code { margin: 24px 0 10px; color: var(--text); font: 40px "Geist Mono", Consolas, monospace; letter-spacing: .12em; }
+      .pair-ip { color: var(--faint); font: 14px "Geist Mono", Consolas, monospace; }
+      #pair-phone { position: absolute; z-index: 4; top: 20px; right: 80px; width: 338px; height: 710px; }
+      .phone-pair-content { display: flex; height: 100%; flex-direction: column; padding: 70px 28px 26px; }
+      .phone-pair-content h3 { margin: 32px 0 12px; font-size: 32px; letter-spacing: -.04em; }
+      .phone-pair-content p { color: var(--muted); font-size: 16px; line-height: 1.45; }
+      .android-code { margin-top: 42px; padding: 22px 16px; border: 1px solid var(--border); background: var(--raised); color: var(--text); font: 30px "Geist Mono", Consolas, monospace; letter-spacing: .1em; text-align: center; }
+      .connect-button { margin-top: auto; padding: 18px; background: var(--accent); color: #160d09; font-size: 17px; font-weight: 700; text-align: center; }
+      .connection-line { position: absolute; z-index: 3; top: 405px; left: 1070px; width: 360px; height: 2px; background: var(--border); transform-origin: left center; }
+      .connection-dot { position: absolute; z-index: 4; top: -7px; left: 0; width: 16px; height: 16px; border: 3px solid var(--canvas); border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 8px rgba(255,90,54,.16); }
+
+      /* Scan */
+      .scan-layout { position: absolute; inset: 132px 116px 78px; display: grid; grid-template-columns: .92fr 1.08fr; gap: 52px; }
+      .scan-copy { display: flex; flex-direction: column; justify-content: center; padding: 30px 48px; }
+      .scan-copy h2 { margin: 26px 0 22px; max-width: 650px; font-size: 66px; font-weight: 600; letter-spacing: -.05em; line-height: 1.02; }
+      .scan-copy p { max-width: 590px; color: var(--muted); font-size: 22px; line-height: 1.5; }
+      .scan-facts { display: flex; gap: 26px; margin-top: 44px; }
+      .scan-fact strong { display: block; color: var(--text); font-size: 25px; }
+      .scan-fact span { color: var(--faint); font-size: 15px; }
+      .scan-board { position: relative; overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
+      .contact-sheet { display: grid; height: 100%; grid-template: repeat(3,1fr) / repeat(3,1fr); gap: 8px; padding: 24px; opacity: .72; }
+      .contact-sheet img { width: 100%; height: 100%; object-fit: cover; }
+      .scan-line { position: absolute; z-index: 3; top: 70px; left: 0; width: 100%; height: 2px; background: var(--accent); box-shadow: 0 0 30px rgba(255,90,54,.7); }
+      .scan-orbit { position: absolute; z-index: 4; top: 50%; left: 50%; display: grid; width: 260px; height: 260px; place-items: center; transform: translate(-50%,-50%); border: 1px solid rgba(242,240,232,.42); border-radius: 50%; background: rgba(16,16,14,.9); }
+      .scan-orbit::before, .scan-orbit::after { position: absolute; border: 1px solid var(--border); border-radius: 50%; content: ""; }
+      .scan-orbit::before { inset: 28px; }
+      .scan-orbit::after { inset: 58px; border-color: var(--accent); }
+      .scan-progress { z-index: 2; text-align: center; }
+      .scan-progress strong { display: block; font-size: 48px; letter-spacing: -.04em; }
+      .scan-progress span { color: var(--muted); font-size: 15px; }
+
+      /* Review deck */
+      .review-copy { position: absolute; top: 176px; left: 118px; width: 460px; }
+      .review-copy h2 { margin: 24px 0 18px; font-size: 62px; font-weight: 600; letter-spacing: -.05em; line-height: 1.02; }
+      .review-copy p { color: var(--muted); font-size: 21px; line-height: 1.5; }
+      .gesture-key { display: grid; margin-top: 40px; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .gesture-key div { padding: 16px; border: 1px solid var(--border); background: var(--surface); }
+      .gesture-key strong { display: block; margin-bottom: 5px; font-size: 17px; }
+      .gesture-key span { color: var(--faint); font-size: 14px; }
+      .gesture-key .queue strong { color: var(--delete); }
+      .gesture-key .keep strong { color: var(--keep); }
+      .review-stage { position: absolute; top: 124px; right: 116px; width: 1040px; height: 826px; overflow: hidden; }
+      .review-card { position: absolute; top: 0; left: 154px; width: 720px; height: 800px; transform-origin: 50% 92%; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 34px 100px rgba(0,0,0,.44); }
+      .review-card.back-one { transform: translate(22px,18px) rotate(2deg) scale(.97); opacity: .72; }
+      .review-card.back-two { transform: translate(-28px,28px) rotate(-3deg) scale(.94); opacity: .44; }
+      .review-media { position: relative; height: 592px; overflow: hidden; border-bottom: 1px solid var(--border); background: #11110f; }
+      .review-media img { width: 100%; height: 100%; object-fit: cover; }
+      .review-media.video img { width: 116%; margin-left: -8%; }
+      .video-chrome { position: absolute; z-index: 2; right: 20px; bottom: 18px; left: 20px; display: flex; align-items: center; gap: 12px; padding: 8px 10px; background: rgba(16,16,14,.84); }
+      .play-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 50%; background: rgba(16,16,14,.82); font-size: 14px; }
+      .video-track { height: 4px; flex: 1; background: rgba(242,240,232,.3); }
+      .video-fill { display: block; width: 18%; height: 100%; background: var(--text); }
+      .review-meta { display: grid; height: 207px; grid-template-columns: 1fr auto; padding: 24px 26px; }
+      .review-tag { display: inline-flex; align-items: center; gap: 10px; color: var(--delete); font: 16px "Geist Mono", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+      .review-tag::before { width: 9px; height: 9px; border-radius: 50%; background: currentColor; content: ""; }
+      .review-name { margin: 16px 0 7px; font-size: 27px; font-weight: 600; letter-spacing: -.025em; }
+      .review-detail { color: var(--muted); font-size: 16px; }
+      .review-score { align-self: start; padding: 12px 13px; border: 1px solid var(--border); color: var(--muted); font: 14px "Geist Mono", Consolas, monospace; }
+      .decision-stamp { position: absolute; z-index: 6; top: 90px; padding: 14px 20px; border: 3px solid currentColor; background: rgba(16,16,14,.86); font: 28px "Geist Mono", Consolas, monospace; letter-spacing: .12em; opacity: 0; }
+      .decision-stamp.delete { left: 82px; color: var(--delete); transform: rotate(-8deg); }
+      .decision-stamp.keep { right: 80px; color: var(--keep); transform: rotate(8deg); }
+      .deck-count { position: absolute; right: 20px; bottom: 0; color: var(--muted); font: 16px "Geist Mono", Consolas, monospace; }
+
+      /* Summary */
+      .summary-layout { position: absolute; inset: 132px 116px 74px; display: grid; grid-template-columns: 1.25fr .75fr; gap: 64px; }
+      .summary-panel { border: 1px solid var(--border); background: var(--surface); }
+      .summary-heading { display: flex; align-items: end; justify-content: space-between; padding: 38px 42px 28px; border-bottom: 1px solid var(--border); }
+      .summary-heading h2 { margin: 16px 0 0; font-size: 60px; font-weight: 600; letter-spacing: -.05em; }
+      .summary-total { text-align: right; }
+      .summary-total strong { display: block; font-size: 44px; letter-spacing: -.04em; }
+      .summary-total span { color: var(--muted); font-size: 15px; }
+      .summary-list { padding: 14px 42px; }
+      .summary-row { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--border); }
+      .summary-thumb { width: 70px; height: 54px; object-fit: cover; }
+      .summary-row strong { display: block; font-size: 18px; }
+      .summary-row span { color: var(--muted); font-size: 14px; }
+      .summary-size { color: var(--text) !important; font-family: "Geist Mono", Consolas, monospace; }
+      .summary-safe { display: flex; align-items: center; gap: 12px; margin: 28px 42px; color: var(--keep); font-size: 16px; }
+      #summary-phone { width: 368px; height: 760px; justify-self: center; }
+      .trash-preview { position: absolute; inset: 10px; overflow: hidden; border-radius: 29px; background: #171714; }
+      .trash-grid { display: grid; height: 54%; grid-template-columns: 1fr 1fr; gap: 4px; opacity: .62; }
+      .trash-grid img { width: 100%; height: 100%; object-fit: cover; }
+      .trash-sheet { position: absolute; right: 0; bottom: 0; left: 0; padding: 28px 24px 24px; border-top: 1px solid #4b493e; background: #292923; }
+      .trash-sheet h3 { margin: 0 0 12px; font-size: 25px; letter-spacing: -.03em; }
+      .trash-sheet p { margin: 0; color: #c2bfb4; font-size: 15px; line-height: 1.45; }
+      .trash-actions { display: grid; margin-top: 24px; grid-template-columns: 1fr 1fr; gap: 9px; }
+      .trash-actions span { padding: 14px 8px; border: 1px solid #5e5b50; color: var(--text); font-size: 14px; text-align: center; }
+      .trash-actions .confirm { border-color: var(--accent); background: var(--accent); color: #160d09; font-weight: 700; }
+
+      /* Outro */
+      #outro { display: grid; place-items: center; }
+      .outro-lockup { display: flex; align-items: center; gap: 24px; }
+      .outro-lockup .brand-mark { width: 68px; height: 68px; font-size: 22px; }
+      .outro-name { font-size: 46px; font-weight: 600; letter-spacing: -.045em; }
+      .outro-rule { width: 0; height: 1px; background: var(--border); }
+      .outro-sub { margin-top: 20px; color: var(--muted); font: 15px "Geist Mono", Consolas, monospace; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+
+      /* Registry-derived film grain, tuned down to preserve UI fidelity. */
+      @keyframes hf-grain-noise { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-8%,5%)} 40%{transform:translate(5%,-8%)} 60%{transform:translate(9%,2%)} 80%{transform:translate(-6%,-4%)} }
+      #grain-overlay { position: absolute; z-index: 100; inset: 0; overflow: hidden; pointer-events: none; }
+      #grain-overlay .grain-texture { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); opacity: .055; animation: hf-grain-noise .55s steps(1) infinite; }
+    </style>
+  </head>
+  <body>
+    <main data-hf-id="hf-c1wo" id="root" data-composition-id="main" data-start="0" data-duration="24" data-width="1920" data-height="1080" data-fps="30">
+      <audio data-hf-id="hf-y1nr" id="music-bed" data-start="0" data-duration="24" data-track-index="20" data-volume="0.27" src="assets/audio/local-pulse.mp3"></audio>
+      <audio data-hf-id="hf-aw0a" id="connect-sound" data-start="3.27" data-duration="0.01" data-track-index="21" data-volume="0.3" src="assets/audio/click_003.ogg"></audio>
+      <audio data-hf-id="hf-ub24" id="queue-sound" data-start="12.34" data-duration="0.6" data-track-index="22" data-volume="0.24" src="assets/audio/card-slide-1.ogg"></audio>
+      <audio data-hf-id="hf-erz0" id="keep-sound" data-start="14.2" data-duration="0.6" data-track-index="23" data-volume="0.2" src="assets/audio/card-slide-1.ogg"></audio>
+      <audio data-hf-id="hf-cpp6" id="summary-sound" data-start="17.47" data-duration="0.19" data-track-index="24" data-volume="0.26" src="assets/audio/impactSoft_medium_001.ogg"></audio>
+      <audio data-hf-id="hf-i8a0" id="outro-sound" data-start="22.93" data-duration="1.0" data-track-index="25" data-volume="0.2" src="assets/audio/impactBell_heavy_000.ogg"></audio>
+
+      <section data-hf-id="hf-zhr5" id="hero" class="scene" aria-label="Phone Memory Slider opening title">
+        <div data-hf-id="hf-1wag" class="hero-gallery" aria-hidden="true">
+          <figure data-hf-id="hf-xdom" class="hero-tile one"><img data-hf-id="hf-1v4c" src="assets/images/fixture-city.svg" alt=""></figure>
+          <figure data-hf-id="hf-51u0" class="hero-tile two"><img data-hf-id="hf-0tfc" src="assets/images/fixture-lake.svg" alt=""></figure>
+          <figure data-hf-id="hf-l8ji" class="hero-tile three"><img data-hf-id="hf-a0q5" src="assets/images/fixture-screen.svg" alt=""></figure>
+          <div data-hf-id="hf-ga8s" class="hero-shade"></div>
+        </div>
+        <div data-hf-id="hf-mndw" class="topbar"><div data-hf-id="hf-uzmc" class="topbar-brand"><span data-hf-id="hf-6982" class="brand-mark">PMS</span><span data-hf-id="hf-8b4j">Phone Memory Slider</span></div><div data-hf-id="hf-7w0b" class="local-pill">Local-only session</div></div>
+        <div data-hf-id="hf-jloi" class="hero-copy">
+          <div data-hf-id="hf-bf8i" class="eyebrow">A private way through the pile</div>
+          <h1 data-hf-id="hf-k00i" id="hero-title"><span data-hf-id="hf-xbqp" data-layout-allow-overlap="">Your camera roll,</span><span data-hf-id="hf-t273" data-layout-allow-overlap="">with an exit.</span></h1>
+          <p data-hf-id="hf-6f6e">Learn from what you keep. Review likely clutter first. Nothing leaves your phone without Android’s final say.</p>
+          <div data-hf-id="hf-geth" class="hero-proof"><span data-hf-id="hf-k2sv" class="proof-chip">Local only</span><span data-hf-id="hf-yzya" class="proof-chip">Recoverable trash</span><span data-hf-id="hf-uubd" class="proof-chip">Learns on-device</span></div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-qjt3" id="pair" class="scene" aria-label="Local phone pairing demonstration">
+        <div data-hf-id="hf-qwf0" class="topbar"><div data-hf-id="hf-ztv0" class="topbar-brand"><span data-hf-id="hf-v2ly" class="brand-mark">PMS</span><span data-hf-id="hf-8839">Connect</span></div><div data-hf-id="hf-6zrw" class="local-pill">Private network</div></div>
+        <div data-hf-id="hf-cq6b" class="pair-layout">
+          <div data-hf-id="hf-py5g" id="pair-desktop" class="desktop-window">
+            <div data-hf-id="hf-85t8" class="window-bar"><span data-hf-id="hf-qyer">Phone Memory Slider</span><span data-hf-id="hf-38wu" class="window-dots"><span data-hf-id="hf-uckh"></span><span data-hf-id="hf-l73p"></span><span data-hf-id="hf-me0s"></span></span></div>
+            <div data-hf-id="hf-bh04" class="pair-content">
+              <div data-hf-id="hf-uhoe" class="pair-message"><div data-hf-id="hf-bk3t" class="eyebrow">Step 01 · Pair locally</div><h2 data-hf-id="hf-mm0u">Your gallery never crosses the internet.</h2><p data-hf-id="hf-u3jm">Connect over your private network or USB tethering. The code expires with this session.</p></div>
+              <div data-hf-id="hf-k19x" class="pair-terminal"><div data-hf-id="hf-tjq2" class="code-card"><div data-hf-id="hf-p2i2" class="label mono">Session code</div><div data-hf-id="hf-1xv9" class="pair-code">481 516</div><div data-hf-id="hf-a419" class="pair-ip">192.168.1.24:41820</div></div></div>
+            </div>
+          </div>
+          <div data-hf-id="hf-jyfk" class="connection-line" aria-hidden="true"><div data-hf-id="hf-uava" class="connection-dot"></div></div>
+          <div data-hf-id="hf-ww01" id="pair-phone" class="phone"><div data-hf-id="hf-9o7x" class="phone-screen"><div data-hf-id="hf-vrvl" class="phone-pair-content"><div data-hf-id="hf-i462" class="eyebrow">Android companion</div><h3 data-hf-id="hf-cnha">Ready to connect</h3><p data-hf-id="hf-wi5i">Only the photos and videos you authorize are available to this session.</p><div data-hf-id="hf-1014" class="android-code">481 516</div><div data-hf-id="hf-6me6" class="connect-button">Start local session</div></div></div></div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-ptca" id="scan" class="scene" aria-label="Local gallery analysis demonstration">
+        <div data-hf-id="hf-pphx" class="topbar"><div data-hf-id="hf-ymxx" class="topbar-brand"><span data-hf-id="hf-vgwz" class="brand-mark">PMS</span><span data-hf-id="hf-3qv3">Analyze</span></div><div data-hf-id="hf-airu" class="local-pill">No uploads</div></div>
+        <div data-hf-id="hf-uypa" class="scan-layout">
+          <div data-hf-id="hf-530z" class="scan-copy"><div data-hf-id="hf-eb5c" class="eyebrow">Step 02 · Learn your taste</div><h2 data-hf-id="hf-auda">Your favorites teach the model. Locally.</h2><p data-hf-id="hf-mh9h">The visual model and every decision remain on this computer. Favorites are always protected.</p><div data-hf-id="hf-ma8h" class="scan-facts"><div data-hf-id="hf-j486" class="scan-fact"><strong data-hf-id="hf-v6qr">12,842</strong><span data-hf-id="hf-log6">items indexed</span></div><div data-hf-id="hf-s2i2" class="scan-fact"><strong data-hf-id="hf-vwtx">728</strong><span data-hf-id="hf-qk2d">favorites learned</span></div><div data-hf-id="hf-sgt3" class="scan-fact"><strong data-hf-id="hf-0j3s">0 B</strong><span data-hf-id="hf-kp2h">uploaded</span></div></div></div>
+          <div data-hf-id="hf-hj04" class="scan-board"><div data-hf-id="hf-tjoh" class="contact-sheet" aria-hidden="true"><img data-hf-id="hf-tw3w" src="assets/images/scan-city-1.svg" alt=""><img data-hf-id="hf-t6g0" src="assets/images/scan-lake-1.svg" alt=""><img data-hf-id="hf-nv39" src="assets/images/scan-screen-1.svg" alt=""><img data-hf-id="hf-3wdq" src="assets/images/scan-screen-2.svg" alt=""><img data-hf-id="hf-64v3" src="assets/images/scan-city-2.svg" alt=""><img data-hf-id="hf-dtwz" src="assets/images/scan-lake-2.svg" alt=""><img data-hf-id="hf-esne" src="assets/images/scan-lake-3.svg" alt=""><img data-hf-id="hf-wo2f" src="assets/images/scan-screen-3.svg" alt=""><img data-hf-id="hf-ayeu" src="assets/images/scan-city-3.svg" alt=""></div><div data-hf-id="hf-qkel" class="scan-line" aria-hidden="true"></div><div data-hf-id="hf-carp" class="scan-orbit" aria-hidden="true"><div data-hf-id="hf-evil" class="scan-progress"><strong data-hf-id="hf-r4cr">82%</strong><span data-hf-id="hf-i4fl">ranking candidates</span></div></div></div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-eq1c" id="review" class="scene" aria-label="Swipe review demonstration">
+        <div data-hf-id="hf-q3sy" class="topbar"><div data-hf-id="hf-z18y" class="topbar-brand"><span data-hf-id="hf-vv80" class="brand-mark">PMS</span><span data-hf-id="hf-l8rh">Review</span></div><div data-hf-id="hf-vec6" class="local-pill">Undoable decisions</div></div>
+        <div data-hf-id="hf-5y2m" class="review-copy"><div data-hf-id="hf-3i0z" class="eyebrow">Step 03 · Decide quickly</div><h2 data-hf-id="hf-47oi">The likely clutter comes first.</h2><p data-hf-id="hf-dk05">Photos and videos are ranked by cleanup confidence, with storage and the model’s reason in view.</p><div data-hf-id="hf-ddaz" class="gesture-key"><div data-hf-id="hf-kv2l" class="queue"><strong data-hf-id="hf-1931">← Queue</strong><span data-hf-id="hf-9pj0">Review for trash</span></div><div data-hf-id="hf-df03" class="keep"><strong data-hf-id="hf-z4hp">Keep →</strong><span data-hf-id="hf-63d3">Protect and learn</span></div></div></div>
+        <div data-hf-id="hf-3lhp" class="review-stage">
+          <article data-hf-id="hf-rtdx" id="review-card-3" class="review-card back-two" data-layout-allow-overflow="" data-layout-allow-occlusion="" aria-label="Video cleanup candidate"><div data-hf-id="hf-awmm" class="review-media video"><img data-hf-id="hf-li2r" id="video-image" data-layout-allow-overflow="" src="assets/images/review-lake.svg" alt="Stylized lake video preview"><div data-hf-id="hf-raps" class="video-chrome"><span data-hf-id="hf-i5cv" class="play-mark">▶</span><span data-hf-id="hf-azgs" class="video-track"><span data-hf-id="hf-nfog" class="video-fill"></span></span><span data-hf-id="hf-zvwr" class="mono">00:14</span></div></div><div data-hf-id="hf-uepu" class="review-meta"><div data-hf-id="hf-yeow"><div data-hf-id="hf-br4s" class="review-tag">Blurry video</div><div data-hf-id="hf-pqcm" class="review-name">IMG_7814.MOV</div><div data-hf-id="hf-avlm" class="review-detail">96 MB · 00:14 · low sharpness</div></div><div data-hf-id="hf-m8ei" class="review-score">91% likely</div></div></article>
+          <article data-hf-id="hf-5f2i" id="review-card-2" class="review-card back-one" data-layout-allow-overflow="" data-layout-allow-occlusion="" aria-label="Photo to keep"><div data-hf-id="hf-bp0f" class="review-media"><img data-hf-id="hf-nlns" src="assets/images/review-city.svg" alt="Stylized city photo"></div><div data-hf-id="hf-h0ti" class="review-meta"><div data-hf-id="hf-y7yw"><div data-hf-id="hf-jo73" class="review-tag" style="color:var(--keep)">Matches favorites</div><div data-hf-id="hf-74xs" class="review-name">City walk</div><div data-hf-id="hf-gzl5" class="review-detail">4.7 MB · portrait · sharp</div></div><div data-hf-id="hf-p0m4" class="review-score">Keep signal</div></div></article>
+          <article data-hf-id="hf-1j3u" id="review-card-1" class="review-card" data-layout-allow-overflow="" data-layout-allow-occlusion="" aria-label="Screenshot cleanup candidate"><div data-hf-id="hf-e6lb" class="review-media"><img data-hf-id="hf-9x3w" src="assets/images/review-screen.svg" alt="Stylized phone screenshot"></div><div data-hf-id="hf-hf4j" class="review-meta"><div data-hf-id="hf-x11t"><div data-hf-id="hf-le7s" class="review-tag">Old screenshot</div><div data-hf-id="hf-y7rt" class="review-name">Screenshot 2026-08-14</div><div data-hf-id="hf-c5sr" class="review-detail">1.8 MB · 51 days old</div></div><div data-hf-id="hf-d0gv" class="review-score">96% likely</div></div></article>
+          <div data-hf-id="hf-vg3o" class="decision-stamp delete">QUEUE</div><div data-hf-id="hf-mx4a" class="decision-stamp keep">KEEP</div><div data-hf-id="hf-rn55" class="deck-count">1 / 246 candidates</div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-qszz" id="summary" class="scene" aria-label="Recoverable trash summary">
+        <div data-hf-id="hf-s3c3" class="topbar"><div data-hf-id="hf-10s3" class="topbar-brand"><span data-hf-id="hf-t32t" class="brand-mark">PMS</span><span data-hf-id="hf-fwvn">Confirm</span></div><div data-hf-id="hf-kkzt" class="local-pill">Android has final say</div></div>
+        <div data-hf-id="hf-4ntj" class="summary-layout">
+          <div data-hf-id="hf-z8jh" class="summary-panel">
+            <div data-hf-id="hf-v56h" class="summary-heading"><div data-hf-id="hf-xfcu"><div data-hf-id="hf-0g10" class="eyebrow">Step 04 · Check the queue</div><h2 data-hf-id="hf-epzc">One last look.</h2></div><div data-hf-id="hf-7hw5" class="summary-total"><strong data-hf-id="hf-jui7"><span data-hf-id="hf-gyz9" id="summary-number">1.42</span> GB</strong><span data-hf-id="hf-1eay">recoverable storage</span></div></div>
+            <div data-hf-id="hf-uilp" class="summary-list"><div data-hf-id="hf-g4fb" class="summary-row"><img data-hf-id="hf-5zps" class="summary-thumb" src="assets/images/summary-screen.svg" alt=""><div data-hf-id="hf-w8fr"><strong data-hf-id="hf-p8c6">Old screenshots</strong><span data-hf-id="hf-1vm8">184 items</span></div><span data-hf-id="hf-kzdv" class="summary-size">612 MB</span></div><div data-hf-id="hf-0jk7" class="summary-row"><img data-hf-id="hf-yyfh" class="summary-thumb" src="assets/images/summary-lake.svg" alt=""><div data-hf-id="hf-wmqs"><strong data-hf-id="hf-dpfy">Blurry videos</strong><span data-hf-id="hf-rj30">9 items</span></div><span data-hf-id="hf-uqsw" class="summary-size">534 MB</span></div><div data-hf-id="hf-0596" class="summary-row"><img data-hf-id="hf-kgx5" class="summary-thumb" src="assets/images/summary-city.svg" alt=""><div data-hf-id="hf-vftp"><strong data-hf-id="hf-8e0a">Near duplicates</strong><span data-hf-id="hf-tlex">53 items</span></div><span data-hf-id="hf-ihc7" class="summary-size">278 MB</span></div></div>
+            <div data-hf-id="hf-wceq" class="summary-safe">● Nothing is permanently deleted. Android opens its recoverable trash prompt.</div>
+          </div>
+          <div data-hf-id="hf-6ia5" id="summary-phone" class="phone"><div data-hf-id="hf-4l6d" class="trash-preview"><div data-hf-id="hf-kksq" class="trash-grid" aria-hidden="true"><img data-hf-id="hf-4rpw" src="assets/images/trash-screen-1.svg" alt=""><img data-hf-id="hf-z113" src="assets/images/trash-lake.svg" alt=""><img data-hf-id="hf-s7tf" src="assets/images/trash-city.svg" alt=""><img data-hf-id="hf-wonb" src="assets/images/trash-screen-2.svg" alt=""></div><div data-hf-id="hf-9uo9" class="trash-sheet" data-layout-allow-overflow=""><h3 data-hf-id="hf-2xzt">Move 246 items to trash?</h3><p data-hf-id="hf-odkh">These items can be restored from trash. Your gallery provider controls how long they remain there.</p><div data-hf-id="hf-1uqs" class="trash-actions"><span data-hf-id="hf-3n33">Cancel</span><span data-hf-id="hf-qyp5" class="confirm">Move to trash</span></div></div></div></div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-96yv" id="outro" class="scene" aria-label="Phone Memory Slider logo"><div data-hf-id="hf-vu4q"><div data-hf-id="hf-csrw" class="outro-lockup"><span data-hf-id="hf-thdu" class="brand-mark">PMS</span><span data-hf-id="hf-71jl" class="outro-rule"></span><span data-hf-id="hf-8vqq" class="outro-name">Phone Memory Slider</span></div><div data-hf-id="hf-8c0t" class="outro-sub">Private by design · recoverable by default</div></div></section>
+      <div data-hf-id="hf-xk0j" id="grain-overlay" data-layout-ignore="" aria-hidden="true"><div data-hf-id="hf-0qtj" class="grain-texture"></div></div>
+    </main>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+      window.__timelines.main = tl;
+      gsap.set(["#pair", "#scan", "#review", "#summary", "#outro"], { opacity: 0 });
+      gsap.set("#hero-title span", { opacity: 1, y: 0 });
+      gsap.set(["#review-card-2 .review-meta", "#review-card-3 .review-meta", "#review-card-3 .video-chrome"], { opacity: 0 });
+      gsap.set(".trash-sheet > *", { opacity: 0 });
+
+      // The poster is complete on frame zero; motion adds depth without a blank opening.
+      tl.fromTo(".hero-tile.one", { x: -44, y: 34 }, { x: 0, y: 0, duration: 1.35 }, 0);
+      tl.fromTo(".hero-tile.two", { x: 52, y: 42 }, { x: 0, y: 0, duration: 1.45 }, 0);
+      tl.fromTo(".hero-tile.three", { x: 34, y: -26 }, { x: 0, y: 0, duration: 1.1 }, .15);
+      tl.fromTo(".hero-proof .proof-chip", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .55, stagger: .09 }, .5);
+      tl.to("#hero-title span", { y: -7, duration: .55, stagger: .08, yoyo: true, repeat: 1, ease: "sine.inOut" }, 1.15);
+      tl.to("#hero", { opacity: 0, scale: .975, duration: .34, ease: "power2.in" }, 2.93);
+
+      tl.set("#pair", { opacity: 1 }, 3.27);
+      tl.fromTo("#pair-desktop", { x: -210, rotationY: 7, opacity: 0 }, { x: 0, rotationY: 0, opacity: 1, duration: .9 }, 3.27);
+      tl.fromTo("#pair-phone", { x: 180, rotation: 5, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: .9, ease: "back.out(1.25)" }, 3.45);
+      tl.fromTo(".connection-line", { scaleX: 0 }, { scaleX: 1, duration: .8 }, 4.28);
+      tl.fromTo(".connection-dot", { x: 0 }, { x: 344, duration: .85, ease: "power2.inOut" }, 4.32);
+      tl.fromTo(".android-code", { color: "#f2f0e8" }, { color: "#ff5a36", duration: .32, yoyo: true, repeat: 3 }, 5.3);
+      tl.to("#pair-phone", { y: -7, duration: .7, yoyo: true, repeat: 2, ease: "sine.inOut" }, 6);
+      tl.to("#pair", { opacity: 0, duration: .36, ease: "power2.in" }, 8.38);
+
+      tl.set("#scan", { opacity: 1 }, 8.74);
+      tl.fromTo(".scan-copy", { x: -80, opacity: 0 }, { x: 0, opacity: 1, duration: .62 }, 8.74);
+      tl.fromTo(".scan-board", { scale: .9, opacity: 0 }, { scale: 1, opacity: 1, duration: .64, ease: "back.out(1.15)" }, 8.78);
+      tl.fromTo(".scan-line", { y: 0 }, { y: 620, duration: 1.65, ease: "power1.inOut" }, 9);
+      tl.fromTo(".scan-orbit", { rotation: -30, scale: .82 }, { rotation: 210, scale: 1, duration: 1.8, ease: "power1.inOut" }, 8.85);
+      tl.fromTo(".contact-sheet img", { opacity: .25, scale: .94 }, { opacity: 1, scale: 1, duration: .42, stagger: .08 }, 9.02);
+      tl.to("#scan", { opacity: 0, scale: 1.04, duration: .32, ease: "power2.in" }, 11.14);
+
+      // Physical swipe behavior follows the registry rail's drag, momentum, and snap language.
+      tl.set("#review", { opacity: 1 }, 11.46);
+      tl.fromTo(".review-copy", { x: -90, opacity: 0 }, { x: 0, opacity: 1, duration: .65 }, 11.46);
+      tl.fromTo(".review-stage", { x: 180, opacity: 0, rotation: 3 }, { x: 0, opacity: 1, rotation: 0, duration: .78, ease: "back.out(1.25)" }, 11.46);
+      tl.to(".decision-stamp.delete", { opacity: 1, scale: 1.05, duration: .24 }, 12.12);
+      tl.to("#review-card-1 .review-meta", { opacity: 0, duration: .18 }, 12.3);
+      tl.to("#review-card-1", { x: -940, y: 70, rotation: -18, duration: .78, ease: "power3.in" }, 12.34);
+      tl.to(".decision-stamp.delete", { opacity: 0, duration: .16 }, 12.55);
+      tl.to("#review-card-2", { x: -22, y: -18, rotation: 0, scale: 1, opacity: 1, duration: .62, ease: "back.out(1.55)" }, 12.36);
+      tl.to("#review-card-2 .review-meta", { opacity: 1, duration: .24 }, 13.1);
+      tl.to(".deck-count", { opacity: .2, duration: .12, yoyo: true, repeat: 1 }, 13);
+      tl.to(".decision-stamp.keep", { opacity: 1, scale: 1.05, duration: .24 }, 13.78);
+      tl.to("#review-card-2 .review-meta", { opacity: 0, duration: .18 }, 14.08);
+      tl.to("#review-card-2", { x: 920, y: 54, rotation: 17, duration: .78, ease: "power3.in" }, 14.2);
+      tl.to(".decision-stamp.keep", { opacity: 0, duration: .16 }, 14.44);
+      tl.to("#review-card-3", { x: 28, y: -28, rotation: 0, scale: 1, opacity: 1, duration: .65, ease: "back.out(1.55)" }, 14.2);
+      tl.to(["#review-card-3 .review-meta", "#review-card-3 .video-chrome"], { opacity: 1, duration: .28 }, 15.0);
+      tl.to("#video-image", { x: 58, scale: 1.08, duration: 2.3, ease: "none" }, 14.58);
+      tl.to(".video-fill", { width: "76%", duration: 2.1, ease: "none" }, 14.58);
+      tl.to("#review-card-3", { y: -36, duration: .52, yoyo: true, repeat: 1, ease: "sine.inOut" }, 15.2);
+      tl.to("#review", { opacity: 0, duration: .34, ease: "power2.in" }, 17.13);
+
+      tl.set("#summary", { opacity: 1 }, 17.47);
+      tl.fromTo(".summary-panel", { x: -110, opacity: 0 }, { x: 0, opacity: 1, duration: .72 }, 17.47);
+      tl.fromTo("#summary-phone", { x: 110, y: 30, opacity: 0, rotation: 4 }, { x: 0, y: 0, opacity: 1, rotation: 0, duration: .78, ease: "back.out(1.22)" }, 17.55);
+      tl.fromTo(".summary-row", { x: -34, opacity: 0 }, { x: 0, opacity: 1, duration: .46, stagger: .13 }, 18.2);
+      tl.fromTo("#summary-number", { textContent: 0 }, { textContent: 1.42, duration: 1.15, snap: { textContent: .01 } }, 18.25);
+      tl.fromTo(".trash-sheet", { y: 380 }, { y: 0, duration: .82, ease: "power3.out" }, 19.1);
+      tl.to(".trash-sheet > *", { opacity: 1, duration: .28, stagger: .06 }, 19.72);
+      tl.fromTo(".confirm", { scale: .92 }, { scale: 1, duration: .36, ease: "back.out(1.8)" }, 20.1);
+      tl.to("#summary-phone", { y: -8, duration: .7, yoyo: true, repeat: 2, ease: "sine.inOut" }, 20.4);
+      tl.to("#summary", { opacity: 0, duration: .3, ease: "power2.in" }, 22.63);
+
+      tl.set("#outro", { opacity: 1 }, 22.93);
+      tl.fromTo(".outro-lockup .brand-mark", { scale: .45, rotation: -14, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: .46, ease: "back.out(1.8)" }, 22.93);
+      tl.to(".outro-rule", { width: 96, duration: .42 }, 23.08);
+      tl.fromTo(".outro-name", { x: -24, opacity: 0 }, { x: 0, opacity: 1, duration: .42 }, 23.18);
+      tl.fromTo(".outro-sub", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: .35 }, 23.42);
+      tl.seek(0);
+    </script>
+  </body>
+</html>
