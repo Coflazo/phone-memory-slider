@@ -20,8 +20,15 @@ try {
         }
     }
 
+    $hasExecutable = $entries | Where-Object {
+        $_.Contains('/bin/phone_memory_slider') -or
+        $_.Contains('.app/contents/macos/phone_memory_slider')
+    }
+    if (-not $hasExecutable) {
+        throw 'Packaged desktop executable is missing'
+    }
+
     foreach ($required in @(
-        '/bin/phone_memory_slider',
         '/license',
         '/third_party_notices.md',
         '/privacy.md',

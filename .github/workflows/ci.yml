@@ -69,7 +69,14 @@ jobs:
           PMS_SMOKE_TEST: '1'
         shell: pwsh
         run: |
-          $binary = if ($IsWindows) { './build/Release/phone_memory_slider.exe' } else { './build/desktop/phone_memory_slider' }
+          $binary = if ($IsWindows) {
+            './build/Release/phone_memory_slider.exe'
+          } elseif ($IsMacOS) {
+            './build/desktop/phone_memory_slider.app/Contents/MacOS/phone_memory_slider'
+          } else {
+            './build/desktop/phone_memory_slider'
+          }
+          if (-not (Test-Path -LiteralPath $binary)) { throw "Desktop binary was not produced at $binary" }
           & $binary
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -G ZIP
