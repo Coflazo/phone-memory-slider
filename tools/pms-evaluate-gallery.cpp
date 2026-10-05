@@ -73,6 +73,8 @@ int main(int argc, char* argv[]) {
             root.filePath(object.value(QStringLiteral("file")).toString()),
             object.value(QStringLiteral("id")).toInt(),
             QStringLiteral("original"),
+            {},
+            {},
         });
     }
     for (const auto& value : variants) {
@@ -81,6 +83,8 @@ int main(int argc, char* argv[]) {
             root.filePath(object.value(QStringLiteral("file")).toString()),
             object.value(QStringLiteral("source_id")).toInt(),
             object.value(QStringLiteral("kind")).toString(),
+            {},
+            {},
         });
     }
 

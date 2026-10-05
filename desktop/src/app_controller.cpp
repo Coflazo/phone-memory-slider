@@ -657,7 +657,8 @@ void AppController::requestCurrentPreview() {
     }
     preview_watcher_.setFuture(QtConcurrent::run([device_id, media, video_path] {
         DeviceConnector connector;
-        PreviewResult result{.assetId = media.assetId};
+        PreviewResult result;
+        result.assetId = media.assetId;
         if (media.mimeType.startsWith(QStringLiteral("video/"))) {
             if (media.bytes > video_preview_byte_limit) {
                 result.error = QStringLiteral("video exceeds the 2 GiB local preview limit");
