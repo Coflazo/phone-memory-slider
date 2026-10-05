@@ -86,15 +86,24 @@ install(FILES
   DESTINATION .
 )
 
-qt_generate_deploy_qml_app_script(
-  TARGET phone_memory_slider
-  OUTPUT_SCRIPT deploy_script
-  NO_TRANSLATIONS
-  NO_UNSUPPORTED_PLATFORM_ERROR
-  DEPLOY_TOOL_OPTIONS
-    --skip-plugin-types
-    networkinformation,tls,qmltooling
-)
+if(WIN32)
+  qt_generate_deploy_qml_app_script(
+    TARGET phone_memory_slider
+    OUTPUT_SCRIPT deploy_script
+    NO_TRANSLATIONS
+    NO_UNSUPPORTED_PLATFORM_ERROR
+    DEPLOY_TOOL_OPTIONS
+      --skip-plugin-types
+      networkinformation,tls,qmltooling
+  )
+else()
+  qt_generate_deploy_qml_app_script(
+    TARGET phone_memory_slider
+    OUTPUT_SCRIPT deploy_script
+    NO_TRANSLATIONS
+    NO_UNSUPPORTED_PLATFORM_ERROR
+  )
+endif()
 
 # Qt 6.8 emits an unquoted EXECUTABLE value in its generated deployment script.
 # Wrap it so packaging also works when the source/build path contains spaces.
@@ -111,6 +120,16 @@ set(PATCHED_DEPLOY_SCRIPT "${patched_deploy_script}")
 string(CONFIGURE "${deploy_wrapper_template}" deploy_wrapper_contents @ONLY)
 file(GENERATE OUTPUT "${deploy_wrapper}" CONTENT "${deploy_wrapper_contents}")
 install(SCRIPT "${deploy_wrapper}")
+
+if(APPLE)
+  install(CODE [[
+    file(REMOVE_RECURSE
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/phone_memory_slider.app/Contents/PlugIns/networkinformation"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/phone_memory_slider.app/Contents/PlugIns/tls"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/phone_memory_slider.app/Contents/PlugIns/qmltooling"
+    )
+  ]])
+endif()
 
 if(PMS_BUILD_TESTS)
   add_subdirectory(tests)
