@@ -5,6 +5,7 @@ build/
 build-*/
 _CPack_Packages/
 PhoneMemorySlider-*.zip
+PhoneMemorySlider-*.zip.sha256
 out/
 .cache/
 .idea/
@@ -17,6 +18,12 @@ local.properties
 *.db
 *.db-shm
 *.db-wal
+evaluation/gallery/
+evaluation/demo-gallery/
+evaluation/demo-gallery-*/
+evaluation/capture-frames/
+evaluation/capture-*/
+evaluation/demo-stills/
 
 # Hyperframes working output; keep the authored composition and delivery media.
 brag-output/composition/node_modules/

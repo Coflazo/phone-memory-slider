@@ -128,16 +128,22 @@ void ReviewDeckModel::undo() {
     const auto changed = session_.undo();
     endResetModel();
     if (changed) {
+        emit decisionUndone(currentAssetId());
         emit summaryChanged();
         emit currentChanged();
     }
 }
 
 void ReviewDeckModel::applyDecision(const Decision decision) {
+    const auto asset_id = currentAssetId();
     beginResetModel();
     const auto changed = session_.decide_current(decision);
     endResetModel();
     if (changed) {
+        const auto label = decision == Decision::Keep
+                               ? QStringLiteral("keep")
+                               : decision == Decision::Delete ? QStringLiteral("delete") : QString{};
+        emit decisionApplied(asset_id, label);
         preview_asset_id_.clear();
         preview_override_.clear();
         emit summaryChanged();

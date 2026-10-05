@@ -52,6 +52,10 @@ private slots:
         QVERIFY(std::abs(records[0].blurProblem - 0.2F) < 0.001F);
         QCOMPARE(records[1].decision, QStringLiteral("delete"));
 
+        QVERIFY(store.updateLabel(QStringLiteral("phone"), QStringLiteral("b"), QStringLiteral("keep")));
+        QCOMPARE(store.assets(QStringLiteral("phone"))[1].label, QStringLiteral("keep"));
+        QVERIFY(!store.updateLabel(QStringLiteral("phone"), QStringLiteral("b"), QStringLiteral("maybe")));
+
         QVERIFY(store.beginSync(QStringLiteral("phone"), 7));
         QCOMPARE(store.assets(QStringLiteral("phone")).size(), 2);
         QVERIFY(store.beginSync(QStringLiteral("phone"), 8));

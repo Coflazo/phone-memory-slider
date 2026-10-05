@@ -52,6 +52,8 @@ public:
 signals:
     void summaryChanged();
     void currentChanged();
+    void decisionApplied(const QString& asset_id, const QString& label);
+    void decisionUndone(const QString& asset_id);
 
 private:
     void applyDecision(Decision decision);

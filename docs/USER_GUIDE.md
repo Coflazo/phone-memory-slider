@@ -1,33 +1,46 @@
-# Phone Memory Slider beta user guide
+# Phone Memory Slider user guide
 
 ## Before you start
 
-You need an Android 11 or newer phone, a desktop on the same private network (USB tethering also works), the Android companion APK, and the desktop package. Keep both apps open during review. iPhone import is not part of this beta.
+Use a data-capable USB cable and keep a separate backup of important media. On Windows, unlock the phone and approve the computer; Android may also require **File Transfer / MTP** mode. On macOS or Linux, mount or export the phone's DCIM folder and choose it in the app.
 
-## Pair and scan
+The app needs enough free computer storage for the files you decide to remove. A useful rule is the queued batch size plus 10% headroom.
 
-1. Open the Android companion and grant photo/video access. Selected-photo access works, but only selected items can be reviewed.
-2. Tap **Start local pairing**. The phone shows one or more private-network addresses and a six-digit code.
-3. Open the desktop app, enter an address such as `192.168.1.24:41820`, enter the code, and choose **Verify and connect**.
-4. Leave the phone companion open. The desktop resumes an incomplete catalog when possible; if the gallery changed, it safely restarts that catalog revision.
-5. Visual analysis runs locally on the desktop. The personal preference signal activates after at least 20 accessible favorites; before that, quality, similarity, and storage signals drive the order.
+## Connect and scan
+
+1. Connect and unlock the phone.
+2. Open Phone Memory Slider. Choose the detected cable source, or choose a local/mounted DCIM folder.
+3. Review the source description. The app can only analyze what the operating system exposes.
+4. If the scan reports visible Favorites, choose **Analyze now** to learn from them automatically. Otherwise select 20–50 photos you strongly want to keep; these local examples stand in for album metadata the cable protocol hides.
+5. Start analysis. Previews, hashes, features, and model training remain on the computer.
+
+Twenty keeps enable personal similarity. Thirty to fifty varied examples usually give the model a more useful picture of your taste. Without 20 examples, duplicate, quality, and storage rules still work but personalization stays neutral.
 
 ## Review
 
-- Swipe or press **Left** to queue an item for recoverable trash.
+- Swipe or press **Left** to queue an item for removal.
 - Swipe or press **Right** to keep it.
 - Choose **Undo** or press **Z** before confirmation begins.
-- Videos download in bounded chunks to a temporary local cache, start muted, and offer play/pause and sound controls. The cache is removed when the card changes or the app exits.
-- The reason tag is an explanation, not a probability. The app never deletes automatically.
+- Videos play inside the review card when the platform codec supports them.
+- Read the reason tag as evidence, not a prediction certainty. The app never deletes automatically.
 
-## Confirm on Android
+## Confirm and recover
 
-After the last card, review the queued count and storage estimate. Choose **Continue on phone**. Android rechecks that every item still exists and is not a favorite, then opens its own recoverable system-trash prompt. Cancelling that prompt keeps the library unchanged. Trash retention duration is controlled by Android and the gallery provider.
+The summary shows the queued count and estimated space. **Encrypt, verify, remove** processes one file at a time and refuses any item whose bytes changed after review:
+
+1. Copy the source locally.
+2. Encrypt it into the recovery vault with AES-256-GCM.
+3. Decrypt it into a verification file.
+4. Compare size and SHA-256 with the source.
+5. Remove the source only after every prior step succeeds.
+
+The vault location is shown by the app. Do not delete its key file if you need to recover payloads.
 
 ## Troubleshooting
 
-- **Pairing fails:** confirm both devices use the same private network, copy the current code exactly, and allow the app through the Windows private-network firewall prompt.
-- **No media:** check Android photo/video permissions. Selected access intentionally limits the catalog.
-- **Scan restarts:** the phone gallery changed while a revision-bound catalog was transferring; restart is the safe behavior.
-- **Video cannot cache:** free local disk space and retry. Originals are not retained by default; only the current video is cached temporarily.
-- **Connection pauses:** reopen the phone app and start a new session. Completed local analysis stays in the desktop catalog.
+- **No phone appears:** try another data cable/USB port, unlock the phone, approve trust, and select File Transfer/MTP. Some devices expose DCIM only through vendor drivers.
+- **Only some photos appear:** cloud-only, optimized-storage, secure-folder, or app-private media may not be exposed over USB. Download/export it locally first.
+- **Delete is denied:** the device may expose read-only media. Choose a folder copy or use the phone's gallery to remove the reviewed items.
+- **A preview is blank:** the phone may not provide a thumbnail or the desktop may lack that codec. The original is not removed unless the vault transaction succeeds.
+- **Analysis is slow:** full-file SHA-256 is I/O-bound. Keep the phone awake, use a direct USB port, and avoid a heavily loaded hub.
+- **Video will not play:** install an OS codec for that format or review the file on the phone before deciding.

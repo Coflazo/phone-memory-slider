@@ -1,0 +1,12 @@
+{
+    "analysis_ms": 7472,
+    "assets": 200,
+    "duplicate_precision_estimate": 1,
+    "exact_group_recall": 1,
+    "exact_groups": 25,
+    "favorite_protection_violations": 0,
+    "near_group_recall": 0.6666666666666666,
+    "near_groups": 75,
+    "schema": 1,
+    "synthetic_preference_auc": 0.9462068965517242
+}

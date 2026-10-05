@@ -82,6 +82,10 @@ bool CatalogStore::open() {
     if (database_.isOpen()) {
         return true;
     }
+    if (database_path_.isEmpty()) {
+        setError(QStringLiteral("No private application-data directory is available"));
+        return false;
+    }
     database_ = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), connection_name_);
     database_.setDatabaseName(database_path_);
     if (!database_.open()) {
@@ -317,6 +321,28 @@ bool CatalogStore::updateAnalysis(
     query.bindValue(QStringLiteral(":blur"), blur_problem);
     query.bindValue(QStringLiteral(":exposure"), exposure_problem);
     query.bindValue(QStringLiteral(":screenshot"), screenshot_likelihood);
+    query.bindValue(QStringLiteral(":device"), device_id);
+    query.bindValue(QStringLiteral(":asset"), asset_id);
+    if (!query.exec() || query.numRowsAffected() != 1) {
+        setError(query.lastError().text());
+        return false;
+    }
+    return true;
+}
+
+bool CatalogStore::updateLabel(
+    const QString& device_id,
+    const QString& asset_id,
+    const QString& label) {
+    if (device_id.isEmpty() || asset_id.isEmpty() ||
+        (label != QStringLiteral("keep") && label != QStringLiteral("delete") && !label.isEmpty())) {
+        setError(QStringLiteral("Invalid local preference label"));
+        return false;
+    }
+    QSqlQuery query{database_};
+    query.prepare(QStringLiteral(
+        "UPDATE assets SET label=:label WHERE device_id=:device AND asset_id=:asset"));
+    query.bindValue(QStringLiteral(":label"), label);
     query.bindValue(QStringLiteral(":device"), device_id);
     query.bindValue(QStringLiteral(":asset"), asset_id);
     if (!query.exec() || query.numRowsAffected() != 1) {

@@ -38,7 +38,7 @@ void run_media_analysis_tests() {
              .storage_benefit = 0.3F},
             {.asset_id = "near-copy",
              .embedding = pms::FixedEmbedding{0.8F},
-             .perceptual_hash = 42,
+             .perceptual_hash = 43,
              .content_digest = "different",
              .storage_benefit = 0.2F},
             {.asset_id = "kept",

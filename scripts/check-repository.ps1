@@ -1,11 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$tokensPath = Join-Path $root 'design/tokens.json'
-$tokens = Get-Content $tokensPath -Raw | ConvertFrom-Json
+$tokens = Get-Content (Join-Path $root 'design/tokens.json') -Raw | ConvertFrom-Json
 $design = Get-Content (Join-Path $root 'DESIGN.md') -Raw
 $qml = Get-Content (Join-Path $root 'desktop/qml/Theme.qml') -Raw
-$compose = Get-Content (Join-Path $root 'android-companion/app/src/main/kotlin/app/pms/companion/PmsTokens.kt') -Raw
 
 foreach ($property in $tokens.color.PSObject.Properties) {
     foreach ($mode in @('dark', 'light')) {
@@ -16,10 +14,6 @@ foreach ($property in $tokens.color.PSObject.Properties) {
         if ($qml -notmatch [regex]::Escape($hex)) {
             throw "Theme.qml is missing $($property.Name).$mode ($hex)"
         }
-        $composeHex = '0xFF' + $hex.TrimStart('#')
-        if ($compose -notmatch [regex]::Escape($composeHex)) {
-            throw "PmsTokens.kt is missing $($property.Name).$mode ($composeHex)"
-        }
     }
 }
 
@@ -29,21 +23,23 @@ foreach ($property in $tokens.motionMs.PSObject.Properties) {
     }
 }
 
-$runtimeRoots = @(
-    (Join-Path $root 'core'),
-    (Join-Path $root 'desktop'),
-    (Join-Path $root 'android-companion/app/src/main/kotlin')
-)
-$runtimeFiles = Get-ChildItem $runtimeRoots -Recurse -File |
-    Where-Object { $_.Extension -in @('.cpp', '.hpp', '.qml', '.kt') -and $_.FullName -notmatch '[\\/]tests[\\/]' }
-$endpoint = $runtimeFiles | Select-String -Pattern 'https?://(?!local\b)(?!127\.0\.0\.1\b)(?!10\.)(?!192\.168\.)(?!172\.(1[6-9]|2\d|3[01])\.)[A-Za-z0-9\[]+' -CaseSensitive
-if ($endpoint) {
-    throw "Runtime source contains an external endpoint: $($endpoint.Path):$($endpoint.LineNumber)"
-}
+$runtimeFiles = Get-ChildItem @((Join-Path $root 'core'), (Join-Path $root 'desktop')) -Recurse -File |
+    Where-Object { $_.Extension -in @('.cpp', '.hpp', '.qml') -and $_.FullName -notmatch '[\\/]tests[\\/]' }
 
-$protocol = Get-Content (Join-Path $root 'protocol/pms.proto') -Raw
-if ($protocol -notmatch 'syntax = "proto3";' -or $protocol -notmatch 'package pms\.protocol\.v1;') {
-    throw 'Protocol v1 declaration is missing'
+$forbiddenRuntime = $runtimeFiles | Select-String -Pattern @(
+    'Qt6::Network',
+    '#include\s*[<"]QNetwork',
+    '\bQNetwork[A-Za-z]+',
+    '\bQTcpSocket\b',
+    '\bQUdpSocket\b',
+    '\bQWebSocket\b',
+    '\bWinHttp[A-Za-z]+',
+    '\bcurl_easy_',
+    'https?://'
+)
+if ($forbiddenRuntime) {
+    $first = $forbiddenRuntime | Select-Object -First 1
+    throw "Runtime egress primitive found: $($first.Path):$($first.LineNumber)"
 }
 
 $requiredReleaseFiles = @(
@@ -52,9 +48,8 @@ $requiredReleaseFiles = @(
     'third_party/geist/OFL.txt',
     'docs/USER_GUIDE.md',
     'docs/PRIVACY.md',
-    'docs/RELEASE_CHECKLIST.md',
-    'android-companion/app/src/main/res/xml/data_extraction_rules.xml',
-    'android-companion/app/src/main/res/xml/network_security_config.xml'
+    'docs/SECURITY.md',
+    'docs/RELEASE_CHECKLIST.md'
 )
 foreach ($relativePath in $requiredReleaseFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $root $relativePath))) {
@@ -62,13 +57,15 @@ foreach ($relativePath in $requiredReleaseFiles) {
     }
 }
 
-$manifest = Get-Content (Join-Path $root 'android-companion/app/src/main/AndroidManifest.xml') -Raw
-foreach ($requiredSetting in @('android:allowBackup="false"', 'android:fullBackupContent="false"', 'android:usesCleartextTraffic="false"')) {
-    if ($manifest -notmatch [regex]::Escape($requiredSetting)) {
-        throw "Android release safety setting is missing: $requiredSetting"
+foreach ($removedPath in @(
+    'android-companion/settings.gradle.kts',
+    'protocol/pms.proto',
+    'desktop/src/phone_client.cpp',
+    'desktop/src/phone_client.hpp'
+)) {
+    if (Test-Path -LiteralPath (Join-Path $root $removedPath)) {
+        throw "Obsolete network/phone-app path still exists: $removedPath"
     }
 }
 
-& (Join-Path $root 'android-companion/check-scaffold.ps1')
-
-Write-Output 'Repository consistency checks passed'
+Write-Output 'Repository consistency and zero-runtime-egress checks passed'

@@ -10,6 +10,7 @@ Item {
     property bool confirming: false
     property bool complete: false
     property string statusText: ""
+    property string vaultPath: ""
     signal backRequested()
     signal confirmRequested()
 
@@ -21,13 +22,36 @@ Item {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 16
-            Label { text: root.complete ? qsTr("Back in control.") : (root.confirming ? qsTr("Check your phone.") : qsTr("One last look.")); color: Theme.textPrimary; font.family: Theme.displayFont; font.pixelSize: 58; font.weight: Font.DemiBold; font.letterSpacing: -1.5 }
-            Label { Layout.maximumWidth: 520; text: root.complete || root.confirming ? root.statusText : qsTr("Nothing has moved yet. Android will recheck favorites and show its recoverable system-trash prompt before any change."); color: Theme.textSecondary; wrapMode: Text.WordWrap; font.pixelSize: 18; lineHeight: 1.45 }
+            Label {
+                text: root.complete ? qsTr("Back in control.") : (root.confirming ? qsTr("Building your safety net.") : qsTr("One last look."))
+                color: Theme.textPrimary
+                font.family: Theme.displayFont
+                font.pixelSize: 58
+                font.weight: Font.DemiBold
+                font.letterSpacing: -1.5
+            }
+            Label {
+                Layout.maximumWidth: 520
+                text: root.complete || root.confirming ? root.statusText : qsTr("Nothing has moved yet. Each selected file will be copied into the encrypted vault and SHA-256 verified before the original is removed.")
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                font.pixelSize: 18
+                lineHeight: 1.45
+            }
+            Label {
+                visible: root.complete
+                Layout.maximumWidth: 520
+                text: qsTr("Recovery vault: %1").arg(root.vaultPath)
+                color: Theme.textSecondary
+                wrapMode: Text.WrapAnywhere
+                font.family: Theme.monoFont
+                font.pixelSize: 12
+            }
             RowLayout {
                 spacing: 12
                 Button { visible: !root.confirming && !root.complete; text: qsTr("Back to review"); onClicked: root.backRequested(); Accessible.name: text }
-                Button { visible: !root.confirming && !root.complete; text: qsTr("Continue on phone"); highlighted: true; onClicked: root.confirmRequested(); Accessible.name: text }
-                BusyIndicator { visible: root.confirming; running: visible; Accessible.name: qsTr("Waiting for Android trash confirmation") }
+                Button { visible: !root.confirming && !root.complete; text: qsTr("Encrypt, verify & remove"); highlighted: true; onClicked: root.confirmRequested(); Accessible.name: text }
+                BusyIndicator { visible: root.confirming; running: visible; Accessible.name: qsTr("Creating encrypted recovery copies") }
             }
         }
 
@@ -45,7 +69,7 @@ Item {
                 Label { text: root.pendingBytesText; color: Theme.textPrimary; font.family: Theme.displayFont; font.pixelSize: 38; font.weight: Font.DemiBold }
                 Label { text: qsTr("potential space back"); color: Theme.textSecondary; font.pixelSize: 14 }
                 Item { Layout.fillHeight: true }
-                Label { text: qsTr("Recoverable — never permanent delete"); color: Theme.keep; font.pixelSize: 13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Label { text: qsTr("Encrypted recovery copy first"); color: Theme.keep; font.pixelSize: 13; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             }
         }
     }

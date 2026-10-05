@@ -31,6 +31,8 @@ struct CatalogRecord {
     QString reasons{};
     QString label{};
     QString decision{};
+    QString displayName{};
+    QString contentDigest{};
 };
 
 struct CatalogSyncState {
@@ -67,6 +69,10 @@ public:
         float blur_problem,
         float exposure_problem,
         float screenshot_likelihood);
+    [[nodiscard]] bool updateLabel(
+        const QString& device_id,
+        const QString& asset_id,
+        const QString& label);
 
 private:
     [[nodiscard]] bool executeSchema(const QString& sql);

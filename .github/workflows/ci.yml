@@ -11,8 +11,8 @@ jobs:
   repository-checks:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Check tokens, protocol, and local-only boundaries
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check tokens and zero-runtime-egress boundary
         shell: pwsh
         run: ./scripts/check-repository.ps1
 
@@ -23,7 +23,7 @@ jobs:
         os: [windows-latest, macos-14, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure
         run: cmake -S . -B build -DPMS_BUILD_DESKTOP=OFF -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -41,11 +41,11 @@ jobs:
         os: [windows-latest, macos-14, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Linux graphics dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 ninja-build
-      - uses: jurplel/install-qt-action@v4
+      - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:
           version: '6.8.3'
           modules: 'qtmultimedia'
@@ -62,31 +62,33 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Smoke-test desktop shell
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QSG_RHI_BACKEND: software
+          PMS_SMOKE_TEST: '1'
+        shell: pwsh
+        run: |
+          $binary = if ($IsWindows) { './build/Release/phone_memory_slider.exe' } else { './build/desktop/phone_memory_slider' }
+          & $binary
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -G ZIP
-      - uses: actions/upload-artifact@v4
+      - name: Check packaged offline boundary
+        shell: pwsh
+        run: |
+          Get-ChildItem PhoneMemorySlider-*.zip | ForEach-Object {
+            ./scripts/check-package.ps1 -Package $_.FullName
+          }
+      - name: Checksum package
+        shell: pwsh
+        run: |
+          Get-ChildItem PhoneMemorySlider-*.zip | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+            "$hash *$($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: phone-memory-slider-${{ runner.os }}
-          path: PhoneMemorySlider-*.zip
-
-  android:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v4
-      - name: Install Android SDK 36
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.13'
-      - name: Test and assemble companion
-        working-directory: android-companion
-        run: gradle testDebugUnitTest assembleDebug --stacktrace
-      - uses: actions/upload-artifact@v4
-        with:
-          name: phone-memory-slider-android-debug
-          path: android-companion/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            PhoneMemorySlider-*.zip
+            PhoneMemorySlider-*.zip.sha256

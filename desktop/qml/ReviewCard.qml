@@ -74,7 +74,7 @@ Item {
                     visible: mediaKind !== "video"
                     source: previewUrl
                     fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
+                    asynchronous: false
                 }
 
                 Rectangle {
