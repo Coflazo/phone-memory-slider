@@ -3,6 +3,7 @@
 #include <QFontDatabase>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 #include <QStyleHints>
 #include <QTimer>
 #include <qqml.h>
@@ -20,6 +21,7 @@
 #include "app_controller.hpp"
 
 int main(int argc, char* argv[]) {
+    QQuickStyle::setStyle(QStringLiteral("Basic"));
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("Phone Memory Slider"));
     app.setOrganizationName(QStringLiteral("Phone Memory Slider"));
