@@ -7,16 +7,21 @@ add_library(pms_desktop STATIC
   src/device_connector.hpp
   src/face_presence_detector.cpp
   src/face_presence_detector.hpp
+  src/phone_client.cpp
+  src/phone_client.hpp
   src/recovery_vault.cpp
   src/recovery_vault.hpp
   src/review_deck_model.cpp
   src/review_deck_model.hpp
   src/visual_encoder.cpp
   src/visual_encoder.hpp
+  ../third_party/qrcodegen/qrcodegen.cpp
+  ../third_party/qrcodegen/qrcodegen.hpp
 )
-target_include_directories(pms_desktop PUBLIC src)
+target_include_directories(pms_desktop PUBLIC src PRIVATE ../third_party/qrcodegen)
 target_link_libraries(pms_desktop PUBLIC
   pms_core
+  Qt6::Bluetooth
   Qt6::Concurrent
   Qt6::Gui
   Qt6::Multimedia
@@ -43,6 +48,7 @@ qt_add_qml_module(phone_memory_slider
   VERSION 1.0
   QML_FILES
     qml/Main.qml
+    qml/PairingPanel.qml
     qml/DevicePanel.qml
     qml/ReviewCard.qml
     qml/ReviewSummary.qml

@@ -12,7 +12,14 @@ ApplicationWindow {
     visible: true
     color: Theme.canvas
     title: qsTr("Phone Memory Slider")
+    palette.windowText: Theme.textPrimary
+    palette.text: Theme.textPrimary
+    palette.buttonText: Theme.textPrimary
+    palette.placeholderText: Theme.textSecondary
+    palette.highlight: Theme.accent
+    palette.highlightedText: "#171712"
     property bool reducedMotion: systemReducedMotion
+    property bool cableFallback: false
     property int stageDuration: reducedMotion ? Theme.immediateDuration : Theme.expressiveDuration
     property bool working: appController.stage === AppController.Syncing ||
                            appController.stage === AppController.Analyzing ||
@@ -78,7 +85,7 @@ ApplicationWindow {
             Button { visible: appController.stage === AppController.Review; text: qsTr("Undo"); flat: true; onClicked: reviewDeck.undo(); Accessible.name: qsTr("Undo last decision") }
             Button { visible: appController.canCancel; text: qsTr("Cancel"); flat: true; onClicked: appController.cancel(); Accessible.name: qsTr("Cancel local operation") }
             Label {
-                text: qsTr("OFFLINE")
+                text: qsTr("NO INTERNET")
                 color: Theme.keep
                 font.family: Theme.monoFont
                 font.pixelSize: 11
@@ -93,18 +100,53 @@ ApplicationWindow {
     Item {
         anchors.fill: parent
 
+        PairingPanel {
+            anchors.fill: parent
+            phoneModel: appController.phoneModel
+            statusText: appController.statusText
+            qrModules: appController.qrModules
+            qrSize: appController.qrSize
+            pairingReady: appController.pairingReady
+            phoneConnected: appController.phoneConnected
+            galleryPermissionReady: appController.galleryPermissionReady
+            catalogReady: appController.catalogReady
+            reducedMotion: window.reducedMotion
+            enabled: opacity > 0.99
+            opacity: !window.cableFallback &&
+                     (appController.stage === AppController.Welcome ||
+                      appController.stage === AppController.Pairing ||
+                      (appController.stage === AppController.Syncing && appController.bluetoothMode)) ? 1 : 0
+            scale: opacity > 0 ? 1 : (window.reducedMotion ? 1 : 0.985)
+            onModelEdited: model => appController.setPhoneModel(model)
+            onStartRequested: appController.startBluetoothPairing()
+            onFallbackRequested: window.cableFallback = true
+            Behavior on opacity { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }
+            Behavior on scale { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }
+        }
+
         DevicePanel {
             anchors.fill: parent
             devices: appController.devices
             statusText: appController.statusText
             enabled: opacity > 0.99
-            opacity: appController.stage === AppController.Welcome ? 1 : 0
-            scale: appController.stage === AppController.Welcome ? 1 : (window.reducedMotion ? 1 : 0.975)
+            opacity: window.cableFallback && appController.stage === AppController.Welcome ? 1 : 0
+            scale: opacity > 0 ? 1 : (window.reducedMotion ? 1 : 0.975)
             onRefreshRequested: appController.refreshDevices()
             onDeviceRequested: index => appController.scanDevice(index)
             onFolderRequested: folder => appController.scanFolder(folder)
             Behavior on opacity { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }
             Behavior on scale { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }
+        }
+
+        Button {
+            visible: window.cableFallback && appController.stage === AppController.Welcome
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 24
+            text: qsTr("Back to Bluetooth setup")
+            flat: true
+            onClicked: window.cableFallback = false
+            Accessible.name: text
         }
 
         SeedPanel {
@@ -128,8 +170,8 @@ ApplicationWindow {
             statusText: appController.statusText
             deviceName: appController.deviceName
             enabled: opacity > 0.99
-            opacity: window.working ? 1 : 0
-            scale: window.working ? 1 : (window.reducedMotion ? 1 : 1.025)
+            opacity: window.working && !(appController.bluetoothMode && appController.stage === AppController.Syncing) ? 1 : 0
+            scale: opacity > 0 ? 1 : (window.reducedMotion ? 1 : 1.025)
             onCancelRequested: appController.cancel()
             Behavior on opacity { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }
             Behavior on scale { NumberAnimation { duration: window.stageDuration; easing.type: Easing.OutExpo } }

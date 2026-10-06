@@ -1,4 +1,4 @@
-foreach(test_name IN ITEMS app_controller catalog_store device_connector visual_encoder recovery_vault)
+foreach(test_name IN ITEMS app_controller catalog_store device_connector phone_client visual_encoder recovery_vault)
   add_executable(pms_${test_name}_tests ${test_name}_tests.cpp)
   target_include_directories(pms_${test_name}_tests PRIVATE ../src)
   target_link_libraries(pms_${test_name}_tests PRIVATE

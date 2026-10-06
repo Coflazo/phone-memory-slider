@@ -10,6 +10,7 @@
 #include <QImageReader>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QtConcurrent>
 
 #include <algorithm>
@@ -151,6 +152,54 @@ AppController::AppController(
         fail(QStringLiteral("The encrypted recovery vault could not be opened"));
         return;
     }
+
+    connect(&phone_client_, &PhoneClient::pairingReady, this, [this] {
+        status_text_ = QStringLiteral("Scan this code with the Android companion app");
+        emit stateChanged();
+    });
+    connect(&phone_client_, &PhoneClient::paired, this, [this] {
+        phone_connected_ = true;
+        setStage(Stage::Syncing, QStringLiteral("Bluetooth connected · checking gallery access"));
+        phone_client_.fetchCapabilities();
+    });
+    connect(&phone_client_, &PhoneClient::capabilitiesReceived, this, &AppController::handleRemoteCapabilities);
+    connect(&phone_client_, &PhoneClient::catalogPageReceived, this, &AppController::handleRemoteCatalogPage);
+    connect(&phone_client_, &PhoneClient::catalogInvalidated, this, [this] {
+        if (!remote_device_ || stage_ != Stage::Syncing) {
+            return;
+        }
+        records_.clear();
+        remote_synced_count_ = 0;
+        status_text_ = QStringLiteral("Gallery changed · restarting the private catalog transfer");
+        emit stateChanged();
+        phone_client_.fetchCatalog({}, 1000);
+    });
+    connect(&phone_client_, &PhoneClient::thumbnailReceived, this, &AppController::handleRemoteThumbnail);
+    connect(&phone_client_, &PhoneClient::contentReady, this, &AppController::handleRemoteContent);
+    connect(&phone_client_, &PhoneClient::contentProgress, this, [this](const QString& asset_id, const double value) {
+        if (remote_device_ && stage_ == Stage::Review && asset_id == deck_->currentAssetId()) {
+            status_text_ = QStringLiteral("Bluetooth video transfer · %1%").arg(qRound(value * 100.0));
+            emit stateChanged();
+        }
+    });
+    connect(&phone_client_, &PhoneClient::trashPrepared, this, [this](const RemoteTrashPrepared& prepared) {
+        setStage(Stage::Recovering, QStringLiteral("Approve Android's recoverable trash prompt on your phone"));
+        phone_client_.commitTrash(prepared.token);
+    });
+    connect(&phone_client_, &PhoneClient::trashResultReceived, this, [this](const RemoteTrashResult& result) {
+        if (result.pending) {
+            QTimer::singleShot(700, this, [this, token = result.token] { phone_client_.pollTrash(token); });
+            return;
+        }
+        if (result.userCancelled || !result.failedIds.empty()) {
+            fail(result.userCancelled ? QStringLiteral("Android cancelled the trash request; nothing was removed")
+                                      : QStringLiteral("Some items stayed on the phone; review the batch and retry"));
+            return;
+        }
+        progress_ = 1.0;
+        setStage(Stage::Complete, QStringLiteral("Selected items are in Android's recoverable trash"));
+    });
+    connect(&phone_client_, &PhoneClient::requestFailed, this, &AppController::fail);
 
     connect(deck_, &ReviewDeckModel::currentChanged, this, &AppController::requestCurrentPreview);
     connect(deck_, &ReviewDeckModel::decisionApplied, this, [this](const QString& asset_id, const QString& label) {
@@ -352,11 +401,22 @@ QString AppController::statusText() const { return status_text_; }
 QString AppController::errorText() const { return error_text_; }
 QString AppController::deviceName() const { return device_name_; }
 QString AppController::coverageText() const { return coverage_text_; }
+QString AppController::phoneModel() const { return phone_model_; }
+QString AppController::qrPayload() const { return phone_client_.qrPayload(); }
+QVariantList AppController::qrModules() const { return phone_client_.qrModules(); }
+int AppController::qrSize() const noexcept { return phone_client_.qrSize(); }
+QString AppController::bluetoothAddress() const { return phone_client_.bluetoothAddress(); }
+bool AppController::pairingReady() const noexcept { return phone_client_.qrSize() > 0; }
+bool AppController::phoneConnected() const noexcept { return phone_connected_; }
+bool AppController::galleryPermissionReady() const noexcept { return gallery_permission_ready_; }
+bool AppController::catalogReady() const noexcept { return catalog_ready_; }
+bool AppController::bluetoothMode() const noexcept { return remote_device_; }
 QString AppController::vaultPath() const { return vault_.rootPath(); }
 int AppController::seedCount() const noexcept { return static_cast<int>(seed_embeddings_.size()); }
 double AppController::progress() const noexcept { return progress_; }
 bool AppController::canCancel() const noexcept {
-    return stage_ == Stage::Syncing || stage_ == Stage::Seeding || stage_ == Stage::Analyzing;
+    return stage_ == Stage::Pairing || stage_ == Stage::Syncing || stage_ == Stage::Seeding ||
+           stage_ == Stage::Analyzing;
 }
 
 QVariantList AppController::devices() const {
@@ -366,6 +426,36 @@ QVariantList AppController::devices() const {
         result.push_back(QVariantMap{{QStringLiteral("name"), device.name}, {QStringLiteral("detail"), device.detail}});
     }
     return result;
+}
+
+void AppController::setPhoneModel(const QString& model) {
+    if (stage_ != Stage::Welcome) {
+        return;
+    }
+    phone_model_ = model.trimmed().left(120);
+    status_text_ = phone_model_.isEmpty() ? QStringLiteral("Enter the phone model to continue")
+                                         : QStringLiteral("Ready to create a private Bluetooth session");
+    emit stateChanged();
+}
+
+void AppController::startBluetoothPairing() {
+    if (stage_ != Stage::Welcome || phone_model_.isEmpty()) {
+        fail(QStringLiteral("Enter your phone model before pairing"));
+        return;
+    }
+    if (phone_model_.contains(QStringLiteral("iphone"), Qt::CaseInsensitive) ||
+        phone_model_.contains(QStringLiteral("ios"), Qt::CaseInsensitive)) {
+        fail(QStringLiteral("This Bluetooth gallery companion currently supports Android. Use a mounted or exported iPhone gallery folder for now."));
+        return;
+    }
+    error_text_.clear();
+    remote_device_ = true;
+    phone_connected_ = false;
+    gallery_permission_ready_ = false;
+    catalog_ready_ = false;
+    progress_ = 0.0;
+    setStage(Stage::Pairing, QStringLiteral("Starting a local Bluetooth service"));
+    phone_client_.startPairing();
 }
 
 void AppController::refreshDevices() {
@@ -399,6 +489,91 @@ void AppController::scanFolder(const QUrl& folder) {
         return;
     }
     beginScan(id, QFileInfo{folder.toLocalFile()}.fileName(), QStringLiteral("All supported photos and videos under the selected folder"));
+}
+
+void AppController::handleRemoteCapabilities(const RemoteCapabilities& capabilities) {
+    if (!remote_device_ || stage_ != Stage::Syncing) {
+        return;
+    }
+    if (capabilities.permissionCoverage != QStringLiteral("full")) {
+        fail(QStringLiteral("Choose ‘Allow all photos and videos’ on the phone, then scan the QR code again"));
+        return;
+    }
+    if (!capabilities.supportsFavorites || !capabilities.supportsRecoverableTrash) {
+        fail(QStringLiteral("This phone cannot provide the favorite and recoverable-trash safeguards"));
+        return;
+    }
+    gallery_permission_ready_ = true;
+    device_id_ = capabilities.deviceId;
+    device_name_ = capabilities.deviceName;
+    coverage_text_ = QStringLiteral("All MediaStore photos and videos · favorite flags included");
+    records_.clear();
+    previous_remote_labels_.clear();
+    for (const auto& record : store_.assets(device_id_)) {
+        if (record.label == QStringLiteral("keep") || record.label == QStringLiteral("delete")) {
+            previous_remote_labels_.insert(record.assetId, record.label);
+        }
+    }
+    remote_synced_count_ = 0;
+    progress_ = 0.05;
+    status_text_ = QStringLiteral("Reading the private gallery catalog from %1").arg(device_name_);
+    emit stateChanged();
+    phone_client_.fetchCatalog({}, 1000);
+}
+
+void AppController::handleRemoteCatalogPage(const RemoteCatalogPage& page) {
+    if (!remote_device_ || stage_ != Stage::Syncing || device_id_.isEmpty()) {
+        return;
+    }
+    const auto state = store_.syncState(device_id_);
+    if (!state.exists || state.revision != page.revision) {
+        if (!store_.beginSync(device_id_, page.revision)) {
+            fail(QStringLiteral("The local catalog could not start synchronization"));
+            return;
+        }
+        records_.clear();
+        remote_synced_count_ = 0;
+    }
+    std::vector<CatalogRecord> page_records;
+    page_records.reserve(page.assets.size());
+    for (const auto& asset : page.assets) {
+        CatalogRecord record{
+            .assetId = asset.assetId,
+            .mimeType = asset.mimeType,
+            .bytes = asset.bytes,
+            .modifiedEpochMs = asset.modifiedEpochMs,
+            .width = asset.width,
+            .height = asset.height,
+            .durationMs = asset.durationMs,
+            .favorite = asset.favorite,
+        };
+        record.displayName = asset.mimeType.startsWith(QStringLiteral("video/")) ? QStringLiteral("Video")
+                                                                                  : QStringLiteral("Photo");
+        record.label = previous_remote_labels_.value(asset.assetId);
+        page_records.push_back(std::move(record));
+    }
+    if (!store_.upsertPage(device_id_, page.revision, page_records, page.nextCursor, page.complete)) {
+        fail(QStringLiteral("The Bluetooth catalog could not be saved: %1").arg(store_.errorString()));
+        return;
+    }
+    remote_synced_count_ += page.assets.size();
+    status_text_ = QStringLiteral("%1 photos and videos received over Bluetooth").arg(remote_synced_count_);
+    progress_ = page.complete ? 1.0 : std::min(0.9, 0.05 + static_cast<double>(remote_synced_count_) / 10000.0);
+    emit stateChanged();
+    if (!page.complete) {
+        phone_client_.fetchCatalog(page.nextCursor, 1000);
+        return;
+    }
+    records_ = store_.assets(device_id_);
+    catalog_ready_ = true;
+    const auto favorite_count = std::ranges::count(records_, true, &CatalogRecord::favorite);
+    setStage(
+        Stage::Seeding,
+        favorite_count > 0
+            ? QStringLiteral("%1 items found · %2 phone favorites already protect and teach the model")
+                  .arg(records_.size())
+                  .arg(favorite_count)
+            : QStringLiteral("%1 items found · add 20–50 keep photos to personalize the ranking").arg(records_.size()));
 }
 
 void AppController::analyzeWithSeeds(const QList<QUrl>& files) {
@@ -441,6 +616,7 @@ void AppController::analyzeWithoutSeeds() {
 }
 
 void AppController::cancel() {
+    phone_client_.disconnectPhone();
     scan_watcher_.cancel();
     encoding_watcher_.cancel();
     ranking_watcher_.cancel();
@@ -452,9 +628,16 @@ void AppController::cancel() {
     deck_->loadItems({});
     device_id_.clear();
     device_name_.clear();
+    previous_remote_labels_.clear();
+    active_remote_asset_id_.clear();
     error_text_.clear();
     progress_ = 0.0;
-    setStage(Stage::Welcome, QStringLiteral("Connect a phone by cable, then scan its USB-visible gallery"));
+    remote_synced_count_ = 0;
+    remote_device_ = false;
+    phone_connected_ = false;
+    gallery_permission_ready_ = false;
+    catalog_ready_ = false;
+    setStage(Stage::Welcome, QStringLiteral("Tell us which phone you have, then connect privately"));
     refreshDevices();
 }
 
@@ -481,6 +664,17 @@ void AppController::confirmDelete() {
     const auto batch = deck_->pendingTrashBatch();
     if (batch.asset_ids.empty()) {
         setStage(Stage::Complete, QStringLiteral("Nothing was queued for removal"));
+        return;
+    }
+    if (remote_device_) {
+        std::vector<QString> ids;
+        ids.reserve(batch.asset_ids.size());
+        std::ranges::transform(batch.asset_ids, std::back_inserter(ids), [](const std::string& id) {
+            return QString::fromStdString(id);
+        });
+        progress_ = 0.0;
+        setStage(Stage::Recovering, QStringLiteral("Rechecking favorites before Android opens recoverable trash"));
+        phone_client_.prepareTrash(ids);
         return;
     }
     struct PendingAsset {
@@ -565,10 +759,16 @@ void AppController::fail(const QString& safe_message) {
 }
 
 void AppController::beginScan(QString device_id, QString device_name, QString coverage) {
+    phone_client_.disconnectPhone();
     error_text_.clear();
     records_.clear();
     seed_embeddings_.clear();
     decision_label_history_.clear();
+    previous_remote_labels_.clear();
+    remote_device_ = false;
+    phone_connected_ = false;
+    gallery_permission_ready_ = false;
+    catalog_ready_ = false;
     device_id_ = std::move(device_id);
     device_name_ = std::move(device_name);
     coverage_text_ = std::move(coverage);
@@ -602,6 +802,11 @@ void AppController::fetchNextAnalysisPreview() {
         return;
     }
     const auto record = records_[analysis_index_];
+    if (remote_device_) {
+        active_remote_asset_id_ = record.assetId;
+        phone_client_.fetchThumbnail(active_remote_asset_id_, 512);
+        return;
+    }
     const auto device_id = device_id_;
     encoding_watcher_.setFuture(QtConcurrent::run([device_id, record] {
         DeviceConnector connector;
@@ -626,6 +831,40 @@ void AppController::fetchNextAnalysisPreview() {
     }));
 }
 
+void AppController::handleRemoteThumbnail(const QString& asset_id, const QByteArray& bytes) {
+    if (!remote_device_ || asset_id != active_remote_asset_id_) {
+        return;
+    }
+    if (stage_ == Stage::Analyzing && analysis_index_ < records_.size()) {
+        const auto record = records_[analysis_index_];
+        encoding_watcher_.setFuture(QtConcurrent::run([bytes, record] {
+            AnalysisSample sample;
+            const QImage image = QImage::fromData(bytes);
+            if (image.isNull()) {
+                sample.error = QStringLiteral("The phone returned an unreadable private preview");
+                return sample;
+            }
+            sample.encoding = VisualEncoder::encode(
+                image,
+                record.mimeType.startsWith(QStringLiteral("video/")),
+                record.bytes,
+                record.durationMs);
+            return sample;
+        }));
+        return;
+    }
+    if (stage_ != Stage::Review || asset_id != deck_->currentAssetId() || !preview_cache_.isValid()) {
+        return;
+    }
+    const auto path = preview_cache_.filePath(QString::number(qHash(asset_id)) + QStringLiteral(".jpg"));
+    QSaveFile file{path};
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
+        fail(QStringLiteral("The local Bluetooth preview could not be displayed"));
+        return;
+    }
+    deck_->setCurrentPreview(asset_id, QUrl::fromLocalFile(path));
+}
+
 void AppController::finishAnalysis() {
     status_text_ = QStringLiteral("Learning your preference profile and ranking locally");
     emit stateChanged();
@@ -648,6 +887,26 @@ void AppController::requestCurrentPreview() {
         return;
     }
     removeCachedVideo();
+    if (remote_device_) {
+        active_remote_asset_id_ = asset_id;
+        if (record->mimeType.startsWith(QStringLiteral("video/"))) {
+            if (record->bytes > video_preview_byte_limit) {
+                status_text_ = QStringLiteral("Video exceeds the 2 GiB local preview limit");
+                emit stateChanged();
+                return;
+            }
+            const auto suffix = record->mimeType == QStringLiteral("video/webm") ? QStringLiteral(".webm")
+                              : record->mimeType == QStringLiteral("video/quicktime") ? QStringLiteral(".mov")
+                                                                                      : QStringLiteral(".mp4");
+            cached_video_path_ = preview_cache_.filePath(QString::number(qHash(asset_id)) + suffix);
+            status_text_ = QStringLiteral("Caching this video over private Bluetooth for playback");
+            emit stateChanged();
+            phone_client_.fetchContent(asset_id, record->bytes, cached_video_path_);
+        } else {
+            phone_client_.fetchThumbnail(asset_id, 1600);
+        }
+        return;
+    }
     const auto device_id = device_id_;
     const auto media = *record;
     const auto video_path = preview_cache_.filePath(QString::number(qHash(asset_id)) + QStringLiteral(".video"));
@@ -677,7 +936,23 @@ void AppController::requestCurrentPreview() {
     }));
 }
 
+void AppController::handleRemoteContent(const QString& asset_id, const QUrl& local_url) {
+    if (!remote_device_ || stage_ != Stage::Review || asset_id != deck_->currentAssetId()) {
+        if (local_url.isLocalFile()) {
+            QFile::remove(local_url.toLocalFile());
+        }
+        return;
+    }
+    cached_video_path_ = local_url.toLocalFile();
+    deck_->setCurrentPreview(asset_id, local_url);
+    status_text_ = QStringLiteral("Video ready · swipe left to queue or right to keep");
+    emit stateChanged();
+}
+
 void AppController::removeCachedVideo() {
+    if (remote_device_) {
+        phone_client_.cancelContent();
+    }
     deck_->clearCurrentPreview();
     if (!cached_video_path_.isEmpty()) {
         QFile::remove(cached_video_path_);

@@ -51,6 +51,23 @@ int main(int argc, char* argv[]) {
 #ifdef PMS_ENABLE_DEMO_AUTOMATION
     const auto demo_gallery = qEnvironmentVariable("PMS_DEMO_GALLERY");
     const auto capture_directory = qEnvironmentVariable("PMS_DEMO_CAPTURE_DIR");
+    const auto onboarding_capture = qEnvironmentVariable("PMS_ONBOARDING_CAPTURE");
+    if (!onboarding_capture.isEmpty()) {
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().front());
+        const auto model = qEnvironmentVariable("PMS_ONBOARDING_MODEL", "Pixel 9 Pro");
+        if (!model.isEmpty()) {
+            app_controller.setPhoneModel(model);
+        }
+        if (qEnvironmentVariableIsSet("PMS_CAPTURE_PAIRING")) {
+            QTimer::singleShot(100, &app, [&app_controller] { app_controller.startBluetoothPairing(); });
+        }
+        QTimer::singleShot(1400, &app, [window, onboarding_capture] {
+            if (window) {
+                window->grabWindow().save(onboarding_capture);
+            }
+        });
+        QTimer::singleShot(1700, &app, &QCoreApplication::quit);
+    }
     if (!demo_gallery.isEmpty()) {
         auto* root = engine.rootObjects().front();
         auto capture_frame = std::make_shared<std::function<void()>>([] {});

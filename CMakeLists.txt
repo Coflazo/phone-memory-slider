@@ -32,7 +32,7 @@ add_subdirectory(core)
 add_subdirectory(tools)
 
 if(PMS_BUILD_DESKTOP)
-  find_package(Qt6 6.8 QUIET COMPONENTS Concurrent Quick QuickControls2 Multimedia Sql Test)
+  find_package(Qt6 6.8 QUIET COMPONENTS Bluetooth Concurrent Quick QuickControls2 Multimedia Sql Test)
   if(Qt6_FOUND)
     qt_standard_project_setup(REQUIRES 6.8)
     add_subdirectory(desktop)

@@ -42,6 +42,31 @@ if ($forbiddenRuntime) {
     throw "Runtime egress primitive found: $($first.Path):$($first.LineNumber)"
 }
 
+$androidManifest = Get-Content (Join-Path $root 'android-companion/app/src/main/AndroidManifest.xml') -Raw
+foreach ($permission in @(
+    'android.permission.INTERNET',
+    'android.permission.ACCESS_NETWORK_STATE',
+    'android.permission.CHANGE_WIFI_STATE',
+    'android.permission.CHANGE_WIFI_MULTICAST_STATE'
+)) {
+    if ($androidManifest.Contains($permission)) {
+        throw "Android runtime egress permission found: $permission"
+    }
+}
+
+$androidRuntime = Get-ChildItem (Join-Path $root 'android-companion/app/src/main') -Recurse -File |
+    Where-Object { $_.Extension -in @('.kt', '.java') }
+$forbiddenAndroid = $androidRuntime | Select-String -Pattern @(
+    '\bjava\.net\.(Socket|ServerSocket|URL|HttpURLConnection)\b',
+    '\bokhttp3\.',
+    '\bretrofit2\.',
+    'https?://'
+)
+if ($forbiddenAndroid) {
+    $first = $forbiddenAndroid | Select-Object -First 1
+    throw "Android IP/network primitive found: $($first.Path):$($first.LineNumber)"
+}
+
 $requiredReleaseFiles = @(
     'LICENSE',
     'THIRD_PARTY_NOTICES.md',
@@ -57,14 +82,21 @@ foreach ($relativePath in $requiredReleaseFiles) {
     }
 }
 
-foreach ($removedPath in @(
-    'android-companion/settings.gradle.kts',
-    'protocol/pms.proto',
-    'desktop/src/phone_client.cpp',
-    'desktop/src/phone_client.hpp'
-)) {
-    if (Test-Path -LiteralPath (Join-Path $root $removedPath)) {
-        throw "Obsolete network/phone-app path still exists: $removedPath"
+$bluetoothTokens = @(
+    'QBluetoothServer',
+    'createRfcommSocketToServiceRecord',
+    'pms://pair',
+    'MediaStore.MediaColumns.IS_FAVORITE'
+)
+$allRuntimeText = @(
+    Get-Content (Join-Path $root 'desktop/src/phone_client.cpp') -Raw
+    Get-Content (Join-Path $root 'android-companion/app/src/main/kotlin/app/pms/companion/BluetoothGallerySession.kt') -Raw
+    Get-Content (Join-Path $root 'android-companion/app/src/main/kotlin/app/pms/companion/PairingPayload.kt') -Raw
+    Get-Content (Join-Path $root 'android-companion/app/src/main/kotlin/app/pms/companion/MediaStoreCatalogSource.kt') -Raw
+) -join "`n"
+foreach ($token in $bluetoothTokens) {
+    if (-not $allRuntimeText.Contains($token)) {
+        throw "Bluetooth offline boundary is missing required token: $token"
     }
 }
 
