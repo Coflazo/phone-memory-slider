@@ -27,7 +27,8 @@ struct MediaFacts {
 
 struct ScreenSize { std::uint32_t width, height; };
 
-// Folder segments only (never the file name), case-insensitive; the deepest matching folder wins.
+// Folder segments only (never the file name), case-insensitive. Camera = DCIM as the first segment.
+// Precedence: Screenshots/Screen recordings > Favorites > Messaging > Downloads > Camera > Other.
 [[nodiscard]] FolderClass folder_class(std::string_view relative_path) noexcept;
 [[nodiscard]] MediaKind classify(const MediaFacts& facts, std::span<const ScreenSize> screens) noexcept;
 [[nodiscard]] bool auto_delete_eligible(MediaKind kind) noexcept;  // false for Raw, Sidecar, Unknown
@@ -46,10 +47,12 @@ struct MediaGroups {
     std::vector<std::vector<std::size_t>> bursts;  // same BurstUUID, size >= 2
 };
 
-// Every item lands in exactly one unit. A Live Photo still (HEIF/JPEG) and motion file (QuickTime/MP4)
-// share a unit when their content identifiers are equal, or, when neither identifier contradicts, when
-// they share directory and case-insensitive stem and a capture time is unknown or within 3 s.
-// IMG_1234.AAE, IMG_O1234.AAE and IMG_E1234.* join the unit of the image IMG_1234.* in their directory.
+// Every item lands in exactly one unit. A Live Photo still (HEIF/JPEG) takes at most one motion file
+// (QuickTime/MP4): first one with an equal content identifier and the same directory and stem, then one
+// with an equal identifier under any name, then, when neither identifier contradicts, one with the same
+// directory and case-insensitive stem whose capture time is unknown or within 3 s.
+// IMG_1234.AAE, IMG_O1234.AAE and IMG_E1234.* join the unit of the original IMG_1234.* in their
+// directory: the image, or the video when there is no image.
 [[nodiscard]] MediaGroups group_media(std::span<const GroupingInput> items);
 
 }  // namespace pms

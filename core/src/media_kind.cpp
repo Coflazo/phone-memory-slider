@@ -1,6 +1,7 @@
 #include "pms/media_kind.hpp"
 
 #include <algorithm>
+#include <array>
 #include <numeric>
 #include <unordered_map>
 #include <utility>
@@ -105,24 +106,28 @@ constexpr std::pair<std::string_view, FolderClass> named_folders[] = {
 }  // namespace
 
 FolderClass folder_class(const std::string_view relative_path) noexcept {
+    std::array<bool, 6> seen{};  // indexed by FolderClass
     auto rest = split_path(relative_path).dir;
-    auto found = FolderClass::Other;
-    std::string_view parent;
+    // Camera: DCIM as the first segment (DCIM/Camera, DCIM/100APPLE, ...), never DCIM deeper down.
+    seen[static_cast<std::size_t>(FolderClass::Camera)] = iequals(rest.substr(0, rest.find('/')), "DCIM");
     while (!rest.empty()) {
         const auto slash = rest.find('/');
         const auto folder = rest.substr(0, slash);
         rest = slash == std::string_view::npos ? ""sv : rest.substr(slash + 1);
-        if (iequals(parent, "DCIM") && iequals(folder, "Camera")) {
-            found = FolderClass::Camera;
-        }
         for (const auto& [name, named_class] : named_folders) {
             if (iequals(folder, name)) {
-                found = named_class;
+                seen[static_cast<std::size_t>(named_class)] = true;
             }
         }
-        parent = folder;
     }
-    return found;
+    // Precedence: Screenshots > Favorites > Messaging > Downloads > Camera > Other.
+    for (const auto candidate : {FolderClass::Screenshots, FolderClass::Favorites, FolderClass::Messaging,
+                                 FolderClass::Downloads, FolderClass::Camera}) {
+        if (seen[static_cast<std::size_t>(candidate)]) {
+            return candidate;
+        }
+    }
+    return FolderClass::Other;
 }
 
 MediaKind classify(const MediaFacts& facts, const std::span<const ScreenSize> screens) noexcept {
@@ -185,25 +190,33 @@ MediaGroups group_media(const std::span<const GroupingInput> items) {
     };
     const auto join = [&](const std::size_t keep, const std::size_t other) { parent[root(other)] = root(keep); };
 
-    // Live Photos: each still takes at most one motion file, matched by identifier first, then by name.
+    // Live Photos: each still takes at most one motion file. Passes, strongest evidence first:
+    // same identifier and name, same identifier only, then same name within the time window.
     std::vector<bool> paired(n);
     const auto pair_live = [&](const std::size_t still, const std::size_t motion) {
         join(still, motion);
         paired[still] = true;
         paired[motion] = true;
     };
-    std::unordered_map<std::string_view, std::size_t> still_by_id;
+    std::unordered_map<std::string_view, std::vector<std::size_t>> stills_by_id;
     for (std::size_t i = 0; i < n; ++i) {
         if (live_still(items[i].format) && !items[i].content_identifier.empty()) {
-            still_by_id.try_emplace(items[i].content_identifier, i);
+            stills_by_id[items[i].content_identifier].push_back(i);
         }
     }
-    for (std::size_t i = 0; i < n; ++i) {
-        if (!live_motion(items[i].format) || items[i].content_identifier.empty()) {
-            continue;
-        }
-        if (const auto it = still_by_id.find(items[i].content_identifier); it != still_by_id.end() && !paired[it->second]) {
-            pair_live(it->second, i);
+    for (const bool same_name : {true, false}) {
+        for (std::size_t i = 0; i < n; ++i) {
+            const auto it = live_motion(items[i].format) && !paired[i] ? stills_by_id.find(items[i].content_identifier)
+                                                                        : stills_by_id.end();
+            if (it == stills_by_id.end()) {
+                continue;
+            }
+            const auto still = std::ranges::find_if(it->second, [&](const std::size_t s) {
+                return !paired[s] && (!same_name || keys[s] == keys[i]);
+            });
+            if (still != it->second.end()) {
+                pair_live(*still, i);
+            }
         }
     }
     std::unordered_map<std::string_view, std::vector<std::size_t>> stills_by_key;
@@ -225,11 +238,13 @@ MediaGroups group_media(const std::span<const GroupingInput> items) {
         }
     }
 
-    // Edits and sidecars follow the original image IMG_1234.* in their directory.
+    // Edits and sidecars follow the original IMG_1234.* in their directory: the image, else the video.
     std::unordered_map<std::string_view, std::size_t> original_by_key;
-    for (std::size_t i = 0; i < n; ++i) {
-        if (is_image(items[i].format) && base_keys[i] == keys[i]) {
-            original_by_key.try_emplace(keys[i], i);
+    for (const bool image : {true, false}) {
+        for (std::size_t i = 0; i < n; ++i) {
+            if (items[i].format != MediaFormat::Unknown && is_image(items[i].format) == image && base_keys[i] == keys[i]) {
+                original_by_key.try_emplace(keys[i], i);
+            }
         }
     }
     for (std::size_t i = 0; i < n; ++i) {
@@ -240,15 +255,12 @@ MediaGroups group_media(const std::span<const GroupingInput> items) {
         }
     }
 
-    // Units in order of first item; the card is an original image, then any image, then the rest.
+    // Units in order of first item. Card order: images before videos, originals before edits, sidecars last.
     const auto rank = [&](const std::size_t i) {
         if (sidecar[i]) {
-            return 3;
+            return 4;
         }
-        if (!is_image(items[i].format)) {
-            return 2;
-        }
-        return base_keys[i] == keys[i] ? 0 : 1;
+        return (is_image(items[i].format) ? 0 : 2) + (base_keys[i] == keys[i] ? 0 : 1);
     };
     MediaGroups groups;
     std::vector<std::size_t> unit_at(n, n);  // root -> unit index, n = none yet
