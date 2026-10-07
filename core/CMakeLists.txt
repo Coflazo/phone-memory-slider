@@ -5,6 +5,8 @@ add_library(pms_core STATIC
   src/fixture_catalog.cpp
   src/media_analysis.cpp
   src/preference_model.cpp
+  src/link/frames.cpp
+  src/link/messages.cpp
 )
 
 target_include_directories(pms_core PUBLIC include)
