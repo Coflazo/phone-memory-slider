@@ -1,10 +1,11 @@
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
 
-#include "pms/link/frames.hpp"
 #include "pms/link/messages.hpp"
 #include "test_harness.hpp"
 
@@ -16,6 +17,114 @@ namespace {
 
 using pms::link::Message;
 using pms::link::MsgType;
+using Bytes = std::vector<std::byte>;
+
+// Appends value as `width` big-endian bytes.
+void put(Bytes& b, const std::uint64_t value, const std::size_t width) {
+    for (std::size_t shift = width * 8; shift > 0;) {
+        shift -= 8;
+        b.push_back(static_cast<std::byte>((value >> shift) & 0xFFU));
+    }
+}
+
+// Hand-built messages, independent of encode(). Each is valid except for the parameter under test.
+Bytes header_bytes(const std::uint8_t type) {
+    Bytes b;
+    put(b, type, 1);
+    put(b, 1, 4);  // request_id
+    return b;
+}
+
+Bytes id_list(const std::size_t n) {
+    auto b = header_bytes(0x12);
+    put(b, n, 2);
+    for (std::size_t i = 0; i < n; ++i) {
+        put(b, i + 1, 8);
+    }
+    return b;
+}
+
+Bytes trash_request(const std::size_t n) {
+    auto b = header_bytes(0x20);
+    put(b, n, 2);
+    for (std::size_t i = 0; i < n; ++i) {
+        put(b, i + 1, 8);        // id
+        put(b, 100, 8);          // size
+        put(b, 1700000000, 8);   // date_modified_s
+        b.resize(b.size() + 32); // sha256
+    }
+    return b;
+}
+
+Bytes keyframes(const std::size_t n) {
+    auto b = header_bytes(0x15);
+    put(b, 1, 8);  // id
+    put(b, 0, 1);  // status Ok
+    put(b, n, 2);
+    for (std::size_t i = 0; i < n; ++i) {
+        put(b, 0, 2);  // empty JPEG
+    }
+    return b;
+}
+
+Bytes keyframes_request(const std::size_t count) {
+    auto b = header_bytes(0x14);
+    put(b, 1, 8);
+    put(b, count, 1);
+    return b;
+}
+
+Bytes catalog_since(const std::size_t max_items) {
+    auto b = header_bytes(0x10);
+    put(b, 0, 2);  // empty store_version
+    put(b, 0, 8);  // generation
+    put(b, max_items, 4);
+    return b;
+}
+
+Bytes catalog_page(const std::size_t n, const std::uint8_t media_type) {
+    auto b = header_bytes(0x11);
+    put(b, 0, 2);  // empty store_version
+    put(b, 0, 8);  // next_generation
+    put(b, 0, 1);  // full_resync
+    put(b, 0, 1);  // more
+    put(b, n, 2);
+    for (std::size_t i = 0; i < n; ++i) {
+        put(b, i + 1, 8);
+        put(b, media_type, 1);
+        put(b, 0, 2);  // empty relative_path
+        put(b, 0, 2);  // empty mime
+        b.resize(b.size() + 45);  // size .. favorite, all zero
+    }
+    put(b, 0, 2);  // no removed ids
+    return b;
+}
+
+Bytes preview(const std::size_t jpeg_size) {
+    auto b = header_bytes(0x13);
+    put(b, 1, 8);    // id
+    put(b, 0, 1);    // status Ok
+    put(b, 256, 4);  // width
+    put(b, 192, 4);  // height
+    put(b, jpeg_size, 2);
+    b.resize(b.size() + jpeg_size);
+    return b;
+}
+
+// A Keyframes message of exactly `total` bytes: 32 bytes of fields and lengths, the rest over 8 JPEGs.
+Bytes keyframes_of_size(const std::size_t total) {
+    auto b = header_bytes(0x15);
+    put(b, 1, 8);
+    put(b, 0, 1);
+    put(b, 8, 2);
+    const auto body = total - 32;
+    for (std::size_t i = 0; i < 8; ++i) {
+        const auto size = body / 8 + (i < body % 8 ? std::size_t{1} : std::size_t{0});
+        put(b, size, 2);
+        b.resize(b.size() + size);
+    }
+    return b;
+}
 
 std::array<std::uint8_t, 32> counting_sha256() {
     std::array<std::uint8_t, 32> sha{};
@@ -46,16 +155,18 @@ std::vector<Message> golden_set() {
         {MsgType::Hash, 4, Hash{1, ItemStatus::Ok, counting_sha256()}},
         {MsgType::TrashRequest, 5, TrashRequest{{{1, 123456, 1700000000, counting_sha256()}}}},
         {MsgType::TrashResult, 5, TrashResult{{{1, TrashOutcome::Trashed}, {2, TrashOutcome::Favorite}}}},
-        {MsgType::Error, 6, ErrorMsg{7, "Trash dialog already open"}},
+        {MsgType::Error, 6, ErrorMsg{6, "Trash dialog already open"}},
         {MsgType::Bye, 0, std::monostate{}},
     };
 }
 
-std::vector<std::byte> golden_bytes() {
-    std::vector<std::byte> out;
+// Each message preceded by its u16 BE length. Not a frame stream: Bye is shorter than a frame may be.
+Bytes golden_bytes() {
+    Bytes out;
     for (const auto& message : golden_set()) {
-        const auto frame = pms::link::encode_frame(pms::link::encode(message));
-        out.insert(out.end(), frame.begin(), frame.end());
+        const auto bytes = pms::link::encode(message);
+        put(out, bytes.size(), 2);
+        out.insert(out.end(), bytes.begin(), bytes.end());
     }
     return out;
 }
@@ -126,6 +237,25 @@ void run_link_messages_tests() {
     threw = false;
     try { (void)encode({MsgType::Hash, 1, IdList{}}); } catch (const std::invalid_argument&) { threw = true; }
     pms_check(threw, "a body that does not match its type is refused");
+    threw = false;
+    try { (void)encode({MsgType::HashRequest, 1, IdList{}}); } catch (const std::invalid_argument&) { threw = true; }
+    pms_check(threw, "an empty id list is refused at encode");
+    threw = false;
+    try { (void)encode({MsgType::KeyframesRequest, 1, KeyframesRequest{1, 0}}); } catch (const std::invalid_argument&) { threw = true; }
+    pms_check(threw, "a request for 0 keyframes is refused at encode");
+
+    // Decode-side caps on hand-built bytes: the cap itself is accepted, one past it is refused.
+    pms_check(decode(id_list(16)) && !decode(id_list(17)) && !decode(id_list(0)), "id lists hold 1 to 16 ids");
+    pms_check(decode(trash_request(500)) && !decode(trash_request(501)), "trash requests hold at most 500 items");
+    pms_check(decode(keyframes(8)) && !decode(keyframes(9)), "at most 8 keyframes");
+    pms_check(decode(keyframes_request(8)) && !decode(keyframes_request(9)) && !decode(keyframes_request(0)), "keyframe requests ask for 1 to 8 frames");
+    pms_check(decode(catalog_since(2000)) && !decode(catalog_since(2001)), "max_items is at most 2000");
+    pms_check(decode(catalog_page(1000, 1)) && !decode(catalog_page(2001, 1)), "at most 2000 catalog items (2001 also overflows the plaintext limit)");
+    pms_check(decode(catalog_page(1, 3)) && !decode(catalog_page(1, 2)), "media_type is 1 or 3");
+    pms_check(decode(preview(max_jpeg)) && !decode(preview(max_jpeg + 1)), "JPEGs are at most 61,440 bytes");
+    pms_check(keyframes_of_size(max_plaintext + 1).size() == 65'520 && decode(keyframes_of_size(max_plaintext)) &&
+                  !decode(keyframes_of_size(max_plaintext + 1)),
+              "plaintext is at most 65,519 bytes");
 
     check_golden_messages();
 }

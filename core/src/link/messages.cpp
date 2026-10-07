@@ -309,7 +309,7 @@ void write_value(Writer& w, const CatalogPage& v) {
 }
 
 void write_value(Writer& w, const IdList& v) { write_list(w, v.ids, max_request_ids); }
-[[nodiscard]] bool read_value(Reader& r, IdList& v) { return read_list(r, v.ids, max_request_ids); }
+[[nodiscard]] bool read_value(Reader& r, IdList& v) { return read_list(r, v.ids, max_request_ids) && !v.ids.empty(); }
 
 void write_value(Writer& w, const Preview& v) {
     w.num(v.id);
@@ -328,7 +328,7 @@ void write_value(Writer& w, const KeyframesRequest& v) {
     w.num(v.count);
 }
 [[nodiscard]] bool read_value(Reader& r, KeyframesRequest& v) noexcept {
-    return r.num(v.id) && r.num(v.count) && static_cast<std::size_t>(v.count) <= max_keyframes;
+    return r.num(v.id) && r.num(v.count) && v.count != 0 && static_cast<std::size_t>(v.count) <= max_keyframes;
 }
 
 void write_value(Writer& w, const Keyframes& v) {

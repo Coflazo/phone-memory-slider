@@ -7,8 +7,8 @@
 namespace pms::link {
 
 std::vector<std::byte> encode_frame(const std::span<const std::byte> payload) {
-    if (payload.size() > max_frame) {
-        throw std::length_error("frame payload above 65535 bytes");
+    if (payload.size() < min_frame || payload.size() > max_frame) {
+        throw std::length_error("frame payload outside 16..65535 bytes");
     }
     std::vector<std::byte> frame;
     frame.reserve(payload.size() + 2);
@@ -30,17 +30,17 @@ bool FrameDecoder::feed(std::span<const std::byte> bytes) {
     }
     while (!bytes.empty()) {
         if (header_size_ < header_.size()) {
+            if (header_size_ == 0 && max_payload_ <= max_preauth_frame && !ready_.empty()) {
+                return fail();  // before the handshake completes, exactly one frame
+            }
             header_[header_size_++] = bytes.front();
             bytes = bytes.subspan(1);
             if (header_size_ < header_.size()) {
                 continue;
             }
             expected_ = (std::to_integer<std::size_t>(header_[0]) << 8U) | std::to_integer<std::size_t>(header_[1]);
-            if (expected_ > max_payload_) {
-                failed_ = true;
-                partial_ = std::vector<std::byte>{};
-                ready_.clear();
-                return false;
+            if (expected_ < min_frame || expected_ > max_payload_) {
+                return fail();
             }
             partial_.reserve(expected_);  // bounded by the cap checked just above
         }
@@ -62,6 +62,13 @@ std::optional<std::vector<std::byte>> FrameDecoder::next() {
     auto frame = std::move(ready_.front());
     ready_.pop_front();
     return frame;
+}
+
+bool FrameDecoder::fail() noexcept {
+    failed_ = true;
+    partial_ = std::vector<std::byte>{};
+    ready_.clear();
+    return false;
 }
 
 bool FrameDecoder::failed() const noexcept {

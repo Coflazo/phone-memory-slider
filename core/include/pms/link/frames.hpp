@@ -12,13 +12,16 @@ namespace pms::link {
 // Wire frame: u16 big-endian payload length, then the payload. See docs/PROTOCOL.md.
 inline constexpr std::size_t max_frame = 65535;
 inline constexpr std::size_t max_preauth_frame = 512;
+inline constexpr std::size_t min_frame = 16;  // every frame carries a Noise message: at least a 16-byte tag
 
-// Throws std::length_error if the payload is above max_frame.
+// Throws std::length_error if the payload is below min_frame or above max_frame.
 [[nodiscard]] std::vector<std::byte> encode_frame(std::span<const std::byte> payload);
 
-// Splits a byte stream into frames. Each length is checked against the cap as soon as its two
-// header bytes arrive, before anything is allocated for it, so the frame being assembled never
-// holds more than cap + 2 bytes. Frames completed by one feed() wait, in order, for next().
+// Splits a byte stream into frames of min_frame..cap bytes. Each length is checked as soon as its two
+// header bytes arrive, before anything is allocated for it. Frames completed by one feed() wait, in
+// order, for next(), so the decoder holds at most one feed's bytes plus cap + 2: callers feed reads
+// of <= 64 KiB and drain next() after every feed. While the cap is at most max_preauth_frame exactly
+// one frame is accepted: a second frame that starts before next() has taken the first fails.
 class FrameDecoder {
 public:
     explicit FrameDecoder(std::size_t max_payload) noexcept;
@@ -30,6 +33,8 @@ public:
     [[nodiscard]] bool failed() const noexcept;
 
 private:
+    bool fail() noexcept;
+
     std::size_t max_payload_;
     std::array<std::byte, 2> header_{};
     std::size_t header_size_{0};

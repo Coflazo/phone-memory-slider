@@ -39,9 +39,9 @@ struct CatalogItem { std::uint64_t id{}; std::uint8_t media_type{}; std::string 
     std::uint64_t generation_modified{}; bool favorite{}; };
 struct CatalogPage { std::string store_version; std::uint64_t next_generation{}; bool full_resync{}; bool more{};
     std::vector<CatalogItem> items; std::vector<std::uint64_t> removed; };
-struct IdList { std::vector<std::uint64_t> ids; };                                  // PreviewRequest, HashRequest (<= 16 ids)
+struct IdList { std::vector<std::uint64_t> ids; };                                  // PreviewRequest, HashRequest (1 to 16 ids)
 struct Preview { std::uint64_t id{}; ItemStatus status{}; std::uint32_t width{}, height{}; std::vector<std::byte> jpeg; };
-struct KeyframesRequest { std::uint64_t id{}; std::uint8_t count{8}; };
+struct KeyframesRequest { std::uint64_t id{}; std::uint8_t count{8}; };              // count 1 to 8
 struct Keyframes { std::uint64_t id{}; ItemStatus status{}; std::vector<std::vector<std::byte>> jpegs; };
 struct Hash { std::uint64_t id{}; ItemStatus status{}; std::array<std::uint8_t, 32> sha256{}; };
 struct TrashItem { std::uint64_t id{}; std::uint64_t size{}; std::int64_t date_modified_s{}; std::array<std::uint8_t, 32> sha256{}; };

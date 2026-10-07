@@ -20,14 +20,37 @@ void run_link_frames_tests() {
     try { (void)encode_frame(std::vector<std::byte>(70000)); } catch (const std::length_error&) { threw = true; }
     pms_check(threw, "oversized frames are refused at encode");
 
-    // One read can carry several frames; every header is checked as it arrives.
-    auto two = encode_frame(std::vector<std::byte>{std::byte{1}});
+    // Every frame carries a Noise message (at least 16 bytes), so a flood of empty frames fails at once.
+    FrameDecoder zeros(max_frame);
+    pms_check(!zeros.feed(std::vector<std::byte>(64, std::byte{0})) && zeros.failed() && !zeros.next(), "a stream of 00 00 fails");
+    threw = false;
+    try { (void)encode_frame(std::vector<std::byte>(15)); } catch (const std::length_error&) { threw = true; }
+    pms_check(threw, "frames shorter than 16 bytes are refused at encode");
+
+    // The pre-auth cap, then the transport cap.
+    const auto big = encode_frame(std::vector<std::byte>(600, std::byte{3}));
+    FrameDecoder handshake(max_preauth_frame);
+    pms_check(!handshake.feed(big) && handshake.failed(), "a 600-byte frame fails at the 512-byte pre-auth cap");
+    FrameDecoder session(max_preauth_frame);
+    session.set_max_payload(max_frame);
+    pms_check(session.feed(big) && session.next().value().size() == 600, "the same frame passes after set_max_payload(max_frame)");
+
+    // Exactly one frame before the handshake completes.
+    auto two = encode_frame(std::vector<std::byte>(16, std::byte{1}));
     const auto second = encode_frame(std::vector<std::byte>(512, std::byte{2}));
     two.insert(two.end(), second.begin(), second.end());
-    FrameDecoder many(max_preauth_frame);
-    pms_check(many.feed(two) && many.next().value().size() == 1 && many.next().value().size() == 512 && !many.next(), "frames split in order");
-    two.push_back(std::byte{0x02});
-    two.push_back(std::byte{0x01});
-    FrameDecoder over(max_preauth_frame);
-    pms_check(!over.feed(two) && over.failed() && !over.next() && !over.feed(f), "a bad header later in a read fails and stays failed");
+    FrameDecoder pre_two(max_preauth_frame);
+    pms_check(!pre_two.feed(two) && pre_two.failed() && !pre_two.next() && !pre_two.feed(f), "two pre-auth frames in one feed fail and stay failed");
+    FrameDecoder taken(max_preauth_frame);
+    pms_check(taken.feed(std::span(two).first(18)) && taken.next().value().size() == 16 &&
+                  taken.feed(std::span(two).subspan(18)) && taken.next().value().size() == 512,
+              "a pre-auth frame taken by next() frees the slot");
+
+    // After the handshake one read can carry several frames; every header is still checked.
+    FrameDecoder many(max_frame);
+    pms_check(many.feed(two) && many.next().value().size() == 16 && many.next().value().size() == 512 && !many.next(), "frames split in order");
+    two.push_back(std::byte{0x00});
+    two.push_back(std::byte{0x0F});
+    FrameDecoder later(max_frame);
+    pms_check(!later.feed(two) && later.failed() && !later.next(), "a short frame later in a read fails");
 }

@@ -1,6 +1,6 @@
 # Phone link protocol, version 1
 
-This document specifies how the Phone Memory Slider desktop app and its Android companion talk to each other. It is written so that a third party can build a compatible peer. The reference implementation is `core/include/pms/link/` (C++); `core/tests/fixtures/golden_messages.bin` holds byte-exact test vectors (see [Test vectors](#10-test-vectors)).
+This document specifies how the Phone Memory Slider desktop app and its Android companion talk to each other. It is written so that a third party can build a compatible peer. The reference implementation is `core/include/pms/link/` (C++); `core/tests/fixtures/golden_messages.bin` holds byte-exact test vectors (see [Test vectors](#11-test-vectors)).
 
 The link never uses IP networking. The only transport is Bluetooth Classic RFCOMM.
 
@@ -35,7 +35,7 @@ Connection limits enforced by the desktop:
 |---|---|
 | Handshake must complete within | 5 s of the connection opening |
 | Handshake attempts | at most 1 per second |
-| Idle timeout | 5 min with no traffic while no request is outstanding |
+| Idle timeout | Time since the last received frame: 5 min normally, 10 min while a `TrashRequest` is outstanding (Android's confirmation dialog is user-paced) |
 
 ## 3. Pairing QR code
 
@@ -90,10 +90,10 @@ Every frame after message 2 carries exactly one Noise transport message: the Cha
 
 | Field | Type | Notes |
 |---|---|---|
-| length | `u16` | Number of bytes that follow, 0 to 65,535 |
+| length | `u16` | Number of bytes that follow, 16 to 65,535 |
 | bytes | `length` bytes | One handshake message, or one transport message |
 
-A receiver checks each length as soon as both header bytes arrive and fails before allocating if it is above the current cap: 512 bytes before the handshake completes, 65,535 after. Because a transport message adds a 16-byte tag, a plaintext message is at most 65,519 bytes.
+A receiver checks each length as soon as both header bytes arrive and fails before allocating if it is below 16 or above the current cap: 512 bytes before the handshake completes, 65,535 after. Every frame carries a Noise message, and the shortest one (an empty transport message) is its 16-byte tag, so a shorter frame is a violation. Before the handshake completes exactly one frame is allowed: a second frame that starts before the first has been processed is a violation. Because a transport message adds a 16-byte tag, a plaintext message is at most 65,519 bytes.
 
 ## 6. Messages
 
@@ -171,7 +171,7 @@ Every message must fit in 65,519 bytes. The list caps below are upper bounds; th
 | items | `list<CatalogItem>` | At most 2,000, and at most `max_items` |
 | removed | `list<u64>` | At most 20,000 ids that no longer exist on the phone |
 
-CatalogItem, 58 bytes plus its two strings:
+CatalogItem, 58 fixed bytes (including both `u16` string lengths) plus the string bytes:
 
 | Field | Type | Notes |
 |---|---|---|
@@ -192,9 +192,9 @@ CatalogItem, 58 bytes plus its two strings:
 
 | Field | Type | Notes |
 |---|---|---|
-| ids | `list<u64>` | At most 16 |
+| ids | `list<u64>` | 1 to 16 ids; an empty list is a violation |
 
-The phone answers each id with its own `Preview` (or `Hash`) message, in any order, all carrying the request's `request_id`. An empty list gets no answer.
+The phone answers each id with its own `Preview` (or `Hash`) message, in any order, all carrying the request's `request_id`.
 
 ### Preview `0x13`
 
@@ -215,14 +215,14 @@ Item status:
 | 2 | Unreadable | The item exists but could not be read or decoded |
 | 3 | Busy | The phone cannot serve it now; ask again later |
 
-Any other status value is a violation. Receivers ignore the data fields of a `Preview`, `Keyframes` or `Hash` whose status is not Ok. A missing or unreadable item never ends the session.
+Any other status value is a violation. When status is not Ok, the sender puts zeros or empty values in the data fields (`width`, `height`, `jpeg`, `jpegs`, `sha256`) and the receiver ignores them. A missing or unreadable item never ends the session.
 
 ### KeyframesRequest `0x14`
 
 | Field | Type | Notes |
 |---|---|---|
 | id | `u64` | Video id |
-| count | `u8` | At most 8 |
+| count | `u8` | 1 to 8 frames; 0 or more than 8 is a violation |
 
 ### Keyframes `0x15`
 
@@ -232,7 +232,7 @@ Any other status value is a violation. Receivers ignore the data fields of a `Pr
 | status | `u8` | Item status |
 | jpegs | `list<jpeg>` | At most 8 frames of at most 61,440 bytes each, spread over the video's duration |
 
-All frames share one message, so together they must fit in 65,519 bytes; in practice each is well under 8 KB.
+The phone answers a `KeyframesRequest` with exactly one `Keyframes` message carrying at most `count` JPEGs (fewer if the video is too short or a frame cannot be decoded). All frames share that one message, so together they must fit in 65,519 bytes; in practice each is well under 8 KB.
 
 ### Hash `0x17`
 
@@ -304,7 +304,7 @@ Desktop rules:
 
 - Insert or replace each item by `id`. The same id may arrive more than once; the latest copy wins.
 - Delete every id in `removed`. Deleting an id it does not hold is a no-op.
-- When `full_resync` is true, first mark every item held for this phone as unconfirmed, then delete the items still unconfirmed when a page with `more` = false arrives. The mark must survive a dropped connection.
+- When `full_resync` is true, first mark every item held for this phone as unconfirmed. Mark every item received during the resync as confirmed. When a page with `more` = false arrives, delete the items still unconfirmed. Both marks must persist, so a resync interrupted by a dropped connection finishes correctly on the next one.
 - Keep requesting while `more` is true.
 
 Reference phone behaviour:
@@ -342,6 +342,12 @@ The desktop splits a larger selection into requests of at most 500 items and sen
 
 The sender of a code marked Closed closes the connection right after sending it. Receivers treat unknown codes as Internal.
 
-## 10. Test vectors
+## 10. Implementation notes
 
-`core/tests/fixtures/golden_messages.bin` holds one plaintext message of every type, in ascending type order, each preceded by its `u16` big-endian length (the same layout as a frame). The field values are in `golden_set()` in `core/tests/link_messages_tests.cpp`. A compatible encoder reproduces the file byte for byte, and a compatible decoder accepts every message in it. The C++ test suite checks the file on every run; regenerate it with `pms_core_tests --write-golden core/tests/fixtures` only for a deliberate protocol change.
+- Frame decoder memory: completed frames wait until the caller takes them, so a decoder holds at most one read's bytes plus the cap plus 2. Feed reads of at most 64 KiB and take every completed frame after each read.
+- Lists: grow a list one parsed element at a time instead of reserving from the count field, so memory follows the bytes actually received.
+- Encoders: refuse to send anything the decoder would refuse. The reference `encode()` runs its own decoder on every message before returning it.
+
+## 11. Test vectors
+
+`core/tests/fixtures/golden_messages.bin` holds one plaintext message of every type, in ascending type order, each preceded by its `u16` big-endian length. It is not a frame stream: some plaintext messages, such as `Bye`, are shorter than the 16-byte frame minimum. The field values are in `golden_set()` in `core/tests/link_messages_tests.cpp`. A compatible encoder reproduces the file byte for byte, and a compatible decoder accepts every message in it. The C++ test suite checks the file on every run; regenerate it with `pms_core_tests --write-golden core/tests/fixtures` only for a deliberate protocol change.
