@@ -130,15 +130,15 @@ constexpr auto same_byte = [](const std::byte b, const char c) noexcept {
             case fourcc("msf1"):
             case fourcc("hevs"):
             case fourcc("hevm"):
+            case fourcc("hevc"):
+            case fourcc("hevx"):
                 heif_sequence = true;
                 [[fallthrough]];
             case fourcc("heic"):
             case fourcc("heix"):
-            case fourcc("hevc"):
             case fourcc("heim"):
             case fourcc("heis"):
             case fourcc("mif1"):
-            case fourcc("hevx"):
                 heif = true;
                 break;
             case fourcc("avis"):
@@ -170,7 +170,17 @@ constexpr auto same_byte = [](const std::byte b, const char c) noexcept {
         }
     };
     if (box_end >= 12) {
-        classify(be32_at(head, 8));  // major brand
+        const auto major = be32_at(head, 8);
+        switch (major) {
+            case fourcc("M4A "):
+            case fourcc("M4B "):
+            case fourcc("M4P "):
+            case fourcc("crx "):
+                return {};  // audio-only and Canon RAW: they list isom/mp42 but are not video
+            default:
+                classify(major);
+                break;
+        }
     }
     for (std::size_t offset = 16; offset + 4 <= box_end; offset += 4) {
         classify(be32_at(head, offset));  // compatible brands
@@ -198,8 +208,9 @@ constexpr auto same_byte = [](const std::byte b, const char c) noexcept {
 
 }  // namespace
 
-SniffResult sniff_media(const std::span<const std::byte> head) noexcept {
+SniffResult sniff_media(std::span<const std::byte> head) noexcept {
     using namespace std::string_view_literals;
+    head = head.first(std::min(head.size(), sniff_bytes));
     if (matches(head, 0, "\xFF\xD8\xFF")) {
         return {MediaFormat::Jpeg};
     }

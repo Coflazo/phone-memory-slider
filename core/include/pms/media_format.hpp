@@ -30,7 +30,7 @@ struct SniffResult {
     bool video{};
 };
 
-inline constexpr std::size_t sniff_bytes = 65536;  // callers pass up to this many leading bytes
+inline constexpr std::size_t sniff_bytes = 65536;  // bytes past this many are ignored
 
 // Types a file from its leading bytes, never its extension. `head` is untrusted:
 // nothing past head.size() is read and no length field inside it is believed.
