@@ -7,6 +7,7 @@ void run_review_session_tests();
 void run_fixture_catalog_tests();
 void run_media_analysis_tests();
 void run_preference_model_tests();
+void run_media_format_tests();
 
 int main() {
     try {
@@ -16,6 +17,7 @@ int main() {
         run_fixture_catalog_tests();
         run_media_analysis_tests();
         run_preference_model_tests();
+        run_media_format_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {
