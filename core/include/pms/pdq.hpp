@@ -15,11 +15,11 @@ struct PdqHash { std::array<std::uint64_t, 4> bits{}; int quality{}; };
 struct RgbView { const std::uint8_t* pixels{}; std::uint32_t width{}, height{}, stride{}; };
 
 // The caller passes <= 512 px on the long side (PDQ's own reference resizes to that before hashing).
-// Prefer a width that is not a power of two: PDQ's column blur runs about 4x slower at width 512 than at
-// 511 (cache set conflicts): 4.6 ms against 1.5 ms for 512x384 against 511x383 on a Ryzen 7 7735HS.
+// Prefer a width that is not a power of two: PDQ is about 3x slower at exactly 512 px wide than at 500-511 px,
+// because its column blur hits cache set conflicts at a power-of-two row pitch.
 // Thread-safe: scratch is allocated per call (2 * width * height floats plus about 21 KB of stack).
-// Returns an empty hash with quality 0 for a null `pixels`, a stride shorter than width * 3, a side below
-// PDQ's 5 px minimum, or a pixel count beyond PDQ's int indexing.
+// Returns an empty hash with quality 0 for a null `pixels`, a stride shorter than width * 3 or above INT_MAX,
+// or a side below PDQ's 5 px minimum or above 4096 px.
 [[nodiscard]] PdqHash pdq_hash(RgbView image);
 
 [[nodiscard]] int hamming(const PdqHash& a, const PdqHash& b) noexcept;

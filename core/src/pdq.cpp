@@ -12,14 +12,15 @@ namespace pms {
 namespace {
 
 constexpr std::uint32_t min_side = 5;  // MIN_HASHABLE_DIM in pdqhashing.cpp; PDQ itself returns zeros below it
+constexpr std::uint32_t max_side = 4096;  // callers resize to <= 512 first; a larger side is a caller bug
 
 }  // namespace
 
 PdqHash pdq_hash(const RgbView image) {
     const std::uint32_t width = image.width, height = image.height;
-    // PDQ indexes pixels and rows with int, so the pixel count and the row stride must fit one.
-    if (image.pixels == nullptr || width < min_side || height < min_side || image.stride > INT_MAX ||
-        std::uint64_t{image.stride} < std::uint64_t{width} * 3 || std::uint64_t{width} * height > INT_MAX)
+    // PDQ takes the row stride as an int and indexes luma with int, which max_side keeps far from overflow.
+    if (image.pixels == nullptr || width < min_side || height < min_side || width > max_side || height > max_side ||
+        image.stride > INT_MAX || std::uint64_t{image.stride} < std::uint64_t{width} * 3)
         return {};
     const int rows = static_cast<int>(height), cols = static_cast<int>(width);
     const std::size_t pixels = std::size_t{width} * height;

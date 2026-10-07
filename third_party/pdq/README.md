@@ -46,3 +46,18 @@ Not vendored: `common/pdqhamming.{h,cpp}` (the .cpp is a 900 KB lookup table), `
    used by the header's `dump*()` helpers, which upstream reached through `pdqhamming.h`'s includes.
 
 To check: `git diff --no-index <upstream pdq/cpp> third_party/pdq` shows only the lines above.
+
+## Cross-check against upstream
+
+The wrapper reproduces upstream's own regression hash bit for bit. The image is not committed here (core has
+no JPEG decoder), so the check is manual:
+
+1. Fetch `pdq/data/reg-test-input/dih/bridge-1-original.jpg` (1600x1004) from ThreatExchange at the commit above.
+2. Decode it with PIL: `numpy.asarray(Image.open(path).convert("RGB"))`.
+3. Resize to 512x512 by nearest neighbour the way upstream's `pdqio.cpp` does through CImg `resize(512, 512)`:
+   output pixel (x, y) takes source pixel (`floor(x * W / 512)`, `floor(y * H / 512)`). Index with numpy
+   (`img[ys][:, xs]`); PIL's own `NEAREST` resize samples pixel centres and picks different pixels.
+4. Hash the contiguous 512x512 RGB buffer with `pms::pdq_hash({data, 512, 512, 512 * 3})` and print
+   `bits[3]`, `bits[2]`, `bits[1]`, `bits[0]` as 16 hex digits each.
+5. Expected: `d8f8f0cee0f4a84f0637022a078f67f0b36e2ed596621e1d33e6339c4e9c9b22`, quality 100, the
+   `bridge-1-original.jpg` line of upstream's `pdq/cpp/reg_test/expected/out`.

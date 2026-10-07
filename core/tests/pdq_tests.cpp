@@ -65,6 +65,13 @@ void run_pdq_tests() {
     pms_check(is_empty(pms::pdq_hash({a.data(), 320, 4, 960})), "height below 5 gives an empty hash");
     pms_check(!is_empty(pms::pdq_hash({a.data(), 5, 5, 960})), "5x5 is the smallest hashable image");
 
+    // A side above 4096 px means the caller skipped the resize: refused rather than blurred at full size.
+    const auto wide = scene(4097, 5, 0, 0), tall = scene(5, 4097, 0, 0);
+    pms_check(is_empty(pms::pdq_hash({wide.data(), 4097, 5, 4097 * 3})), "a width above 4096 gives an empty hash");
+    pms_check(is_empty(pms::pdq_hash({tall.data(), 5, 4097, 5 * 3})), "a height above 4096 gives an empty hash");
+    pms_check(!is_empty(pms::pdq_hash({wide.data(), 4096, 5, 4097 * 3})), "a width of 4096 is still hashed");
+    pms_check(!is_empty(pms::pdq_hash({tall.data(), 5, 4096, 5 * 3})), "a height of 4096 is still hashed");
+
     // Regression pin. Provenance: computed by the vendored PDQ (ThreatExchange 85978d7) through this wrapper,
     // MSVC 19.43 x64 Release and Debug; PDQ hex 7dffabea54004155 5155015541550155 4155feaaaeaa7eaa aeaafe88aeaafe88
     // (bits[3]..bits[0]). The same wrapper reproduces upstream's reg-test hash for
