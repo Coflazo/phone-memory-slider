@@ -2,6 +2,7 @@ add_library(pms_core STATIC
   src/ranking.cpp
   src/media_format.cpp
   src/media_meta.cpp
+  src/media_kind.cpp
   src/review_queue.cpp
   src/review_session.cpp
   src/fixture_catalog.cpp

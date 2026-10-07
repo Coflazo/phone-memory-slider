@@ -9,6 +9,7 @@ void run_media_analysis_tests();
 void run_preference_model_tests();
 void run_media_format_tests();
 void run_media_meta_tests();
+void run_media_kind_tests();
 
 int main() {
     try {
@@ -20,6 +21,7 @@ int main() {
         run_preference_model_tests();
         run_media_format_tests();
         run_media_meta_tests();
+        run_media_kind_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

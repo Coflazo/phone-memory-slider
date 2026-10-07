@@ -3,6 +3,7 @@ add_executable(pms_core_tests
   fixture_catalog_tests.cpp
   media_analysis_tests.cpp
   media_format_tests.cpp
+  media_kind_tests.cpp
   media_meta_tests.cpp
   preference_model_tests.cpp
   ranking_tests.cpp
