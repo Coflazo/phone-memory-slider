@@ -11,6 +11,7 @@ void run_media_format_tests();
 void run_media_meta_tests();
 void run_media_kind_tests();
 void run_quality_tests();
+void run_pdq_tests();
 
 int main() {
     try {
@@ -24,6 +25,7 @@ int main() {
         run_media_meta_tests();
         run_media_kind_tests();
         run_quality_tests();
+        run_pdq_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

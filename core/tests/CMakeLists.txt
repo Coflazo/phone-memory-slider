@@ -5,6 +5,7 @@ add_executable(pms_core_tests
   media_format_tests.cpp
   media_kind_tests.cpp
   media_meta_tests.cpp
+  pdq_tests.cpp
   preference_model_tests.cpp
   quality_tests.cpp
   ranking_tests.cpp

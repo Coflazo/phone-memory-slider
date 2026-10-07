@@ -23,6 +23,8 @@ add_library(pms_core STATIC
   src/media_analysis.cpp
   src/preference_model.cpp
   src/quality.cpp
+  src/pdq.cpp
 )
 
 target_include_directories(pms_core PUBLIC include)
+target_link_libraries(pms_core PRIVATE pms_pdq)
