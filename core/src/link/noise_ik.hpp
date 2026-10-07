@@ -21,6 +21,8 @@ namespace pms::link::detail {
 enum class Role : std::uint8_t { Initiator, Responder };
 
 inline constexpr std::size_t tag_size = 16;  // ChaChaPoly authentication tag
+// The most a handshake message adds to its payload: message 1's ephemeral key, encrypted static key and tag.
+inline constexpr std::size_t max_handshake_overhead = 32 + (32 + tag_size) + tag_size;
 
 // One Noise_IK_25519_ChaChaPoly_SHA256 handshake, then its two transport ciphers. Fails closed: the first failed
 // call frees every key and makes all later calls fail.
@@ -60,6 +62,11 @@ private:
 };
 
 [[nodiscard]] Key32 x25519_public_key(const Key32& private_key);
+// True for the all-zero key and for every key whose X25519 output with a clamped scalar is all zeros (the points of
+// small order, in any encoding): a peer claiming one needs no private key, since every DH result with it is zero.
+[[nodiscard]] bool small_order_public_key(const Key32& public_key);
+// Zeroes memory with volatile writes the compiler cannot drop (noise-c's noise_clean).
+void secure_zero(void* data, std::size_t size) noexcept;
 // docs/PROTOCOL.md section 4: u32 BE of the first 4 hash bytes, modulo 1,000,000, as 6 zero-padded digits.
 [[nodiscard]] std::string sas_digits(std::span<const std::uint8_t, 32> handshake_hash);
 [[nodiscard]] bool equal_constant_time(std::span<const std::uint8_t> a, std::span<const std::uint8_t> b) noexcept;

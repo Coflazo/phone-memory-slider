@@ -1,6 +1,6 @@
 #include "noise_ik.hpp"
 
-#include <cstring>
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -25,21 +25,8 @@ DhState new_x25519() {
     return DhState(state, &noise_dhstate_free);
 }
 
-std::vector<std::uint8_t> copy_in(const std::span<const std::byte> bytes) {
-    std::vector<std::uint8_t> out(bytes.size());
-    if (!bytes.empty()) {
-        std::memcpy(out.data(), bytes.data(), bytes.size());
-    }
-    return out;
-}
-
-std::vector<std::byte> copy_out(const std::uint8_t* data, const std::size_t size) {
-    std::vector<std::byte> out(size);
-    if (size > 0) {
-        std::memcpy(out.data(), data, size);
-    }
-    return out;
-}
+// noise-c takes uint8_t buffers; std::byte storage may be accessed through them (unsigned char aliases anything).
+std::uint8_t* raw(std::vector<std::byte>& bytes) noexcept { return reinterpret_cast<std::uint8_t*>(bytes.data()); }
 
 #ifdef PMS_LINK_TEST_HOOKS
 std::optional<KeyPair> fixed_responder_ephemeral;
@@ -66,6 +53,24 @@ KeyPair generate_keypair() {
 }
 
 namespace detail {
+
+void secure_zero(void* data, const std::size_t size) noexcept { noise_clean(data, size); }
+
+bool small_order_public_key(const Key32& public_key) {
+    if (noise_is_zero(public_key.data(), public_key.size()) != 0) {
+        return true;
+    }
+    // 2^254 is a clamped scalar and a multiple of the cofactor 8: it sends every small-order point to zero and no other.
+    Key32 scalar{};
+    scalar[31] = 0x40;
+    const auto mine = new_x25519();
+    const auto theirs = new_x25519();
+    check(noise_dhstate_set_keypair_private(mine.get(), scalar.data(), scalar.size()), "set check scalar");
+    check(noise_dhstate_set_public_key(theirs.get(), public_key.data(), public_key.size()), "set public key to check");
+    Key32 shared{};
+    check(noise_dhstate_calculate(mine.get(), theirs.get(), shared.data(), shared.size()), "check DH");
+    return noise_is_zero(shared.data(), shared.size()) != 0;
+}
 
 Key32 x25519_public_key(const Key32& private_key) {
     const auto state = new_x25519();
@@ -127,23 +132,25 @@ NoiseIk::NoiseIk(const Role role, const KeyPair& local, const std::span<const st
 NoiseIk::~NoiseIk() = default;
 
 std::optional<std::vector<std::byte>> NoiseIk::write_message(const std::span<const std::byte> payload) {
-    if (!handshake_ || payload.size() > NOISE_MAX_PAYLOAD_LEN) {
+    if (!handshake_ || payload.size() > NOISE_MAX_PAYLOAD_LEN - max_handshake_overhead) {
         close();
         return std::nullopt;
     }
-    auto body_bytes = copy_in(payload);
-    std::vector<std::uint8_t> out(NOISE_MAX_PAYLOAD_LEN);
+    std::vector<std::byte> out(payload.size() + max_handshake_overhead);
     NoiseBuffer message;
-    noise_buffer_set_output(message, out.data(), out.size());
+    noise_buffer_set_output(message, raw(out), out.size());
+    // noise-c only reads the payload (it takes a const NoiseBuffer*), so no copy of it is made.
     NoiseBuffer body;
-    noise_buffer_set_input(body, body_bytes.data(), body_bytes.size());
+    noise_buffer_set_input(body, const_cast<std::uint8_t*>(reinterpret_cast<const std::uint8_t*>(payload.data())),
+                           payload.size());
     // noise-c refuses a buffer with no data pointer, so an empty payload goes in as "no payload" (same bytes).
     if (noise_handshakestate_write_message(handshake_.get(), &message, payload.empty() ? nullptr : &body) != NOISE_ERROR_NONE ||
         !after_handshake_step()) {
         close();
         return std::nullopt;
     }
-    return copy_out(out.data(), message.size);
+    out.resize(message.size);
+    return out;
 }
 
 std::optional<std::vector<std::byte>> NoiseIk::read_message(const std::span<const std::byte> message) {
@@ -151,13 +158,14 @@ std::optional<std::vector<std::byte>> NoiseIk::read_message(const std::span<cons
         close();
         return std::nullopt;
     }
-    auto in = copy_in(message);  // noise-c wipes the message buffer it reads
-    std::vector<std::uint8_t> out(NOISE_MAX_PAYLOAD_LEN);
+    std::vector<std::byte> in(message.begin(), message.end());  // noise-c wipes the message buffer it reads
+    std::vector<std::byte> payload(message.size());              // a payload is never longer than its message
     NoiseBuffer incoming;
-    noise_buffer_set_input(incoming, in.data(), in.size());
+    noise_buffer_set_input(incoming, raw(in), in.size());
     NoiseBuffer body;
-    noise_buffer_set_output(body, out.data(), out.size());
+    noise_buffer_set_output(body, raw(payload), payload.size());
     if (noise_handshakestate_read_message(handshake_.get(), &incoming, &body) != NOISE_ERROR_NONE) {
+        secure_zero(payload.data(), payload.size());
         close();
         return std::nullopt;
     }
@@ -168,10 +176,12 @@ std::optional<std::vector<std::byte>> NoiseIk::read_message(const std::span<cons
         remote_static_ = key;
     }
     if (!after_handshake_step()) {
+        secure_zero(payload.data(), payload.size());
         close();
         return std::nullopt;
     }
-    return copy_out(out.data(), body.size);
+    payload.resize(body.size);
+    return payload;
 }
 
 // After the last handshake message: keep the hash, split into the two transport ciphers, free the handshake.
@@ -202,17 +212,16 @@ std::optional<std::vector<std::byte>> NoiseIk::seal(const std::span<const std::b
         close();
         return std::nullopt;
     }
-    std::vector<std::uint8_t> buffer(plaintext.size() + tag_size);
-    if (!plaintext.empty()) {
-        std::memcpy(buffer.data(), plaintext.data(), plaintext.size());
-    }
+    std::vector<std::byte> buffer(plaintext.size() + tag_size);
+    std::copy(plaintext.begin(), plaintext.end(), buffer.begin());
     NoiseBuffer inout;
-    noise_buffer_set_inout(inout, buffer.data(), plaintext.size(), buffer.size());
-    if (noise_cipherstate_encrypt(send_.get(), &inout) != NOISE_ERROR_NONE) {
+    noise_buffer_set_inout(inout, raw(buffer), plaintext.size(), buffer.size());
+    if (noise_cipherstate_encrypt(send_.get(), &inout) != NOISE_ERROR_NONE) {  // in place: no plaintext remains
+        secure_zero(buffer.data(), buffer.size());
         close();
         return std::nullopt;
     }
-    return copy_out(buffer.data(), inout.size);
+    return buffer;
 }
 
 std::optional<std::vector<std::byte>> NoiseIk::open(const std::span<const std::byte> ciphertext) {
@@ -220,14 +229,15 @@ std::optional<std::vector<std::byte>> NoiseIk::open(const std::span<const std::b
         close();
         return std::nullopt;
     }
-    auto buffer = copy_in(ciphertext);
+    std::vector<std::byte> buffer(ciphertext.begin(), ciphertext.end());
     NoiseBuffer inout;
-    noise_buffer_set_input(inout, buffer.data(), buffer.size());
+    noise_buffer_set_input(inout, raw(buffer), buffer.size());
     if (noise_cipherstate_decrypt(receive_.get(), &inout) != NOISE_ERROR_NONE) {
         close();
         return std::nullopt;
     }
-    return copy_out(buffer.data(), inout.size);
+    buffer.resize(inout.size);  // decrypted in place
+    return buffer;
 }
 
 void NoiseIk::close() noexcept {

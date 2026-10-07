@@ -20,8 +20,12 @@ add_library(pms_link_testing STATIC
 )
 target_compile_definitions(pms_link_testing PUBLIC PMS_LINK_TEST_HOOKS)
 target_link_libraries(pms_link_testing PUBLIC pms_core PRIVATE noise_c)
+# A target that links both copies fails at generate time (PMS_LINK_VARIANT, see core/CMakeLists.txt).
+set_property(TARGET pms_link_testing PROPERTY INTERFACE_PMS_LINK_VARIANT testing)
+set_property(TARGET pms_link_testing APPEND PROPERTY COMPATIBLE_INTERFACE_STRING PMS_LINK_VARIANT)
 
-target_link_libraries(pms_core_tests PRIVATE pms_core pms_link_testing)
+# noise_c directly too: the tests forge a message 1 token by token with noise-c's SymmetricState.
+target_link_libraries(pms_core_tests PRIVATE pms_core pms_link_testing noise_c)
 target_include_directories(pms_core_tests PRIVATE ${PROJECT_SOURCE_DIR}/core/src)  # internal link/noise_ik.hpp
 target_compile_definitions(pms_core_tests PRIVATE PMS_TEST_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME pms_core_tests COMMAND pms_core_tests)

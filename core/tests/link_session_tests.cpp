@@ -7,12 +7,15 @@
 #include <initializer_list>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <noise/protocol.h>  // forges message 1 for a small-order phone key, step by step
 
 #include "link/noise_ik.hpp"  // internal: NoiseIk drives the cacophony vectors and hand-built messages
 #include "pms/link/frames.hpp"
@@ -35,11 +38,71 @@ struct MemoryPins : pms::link::PinStore {
     void unpin(const pms::link::Key32& k) override { m.erase(k); }
 };
 
+struct FailingPins : MemoryPins {
+    void pin(const pms::link::Pinned&) override { throw std::runtime_error("pin store unavailable"); }
+};
+
 using Bytes = std::vector<std::byte>;
 using pms::link::Key32;
 using pms::link::KeyPair;
 using pms::link::detail::NoiseIk;
 using pms::link::detail::Role;
+
+void noise_ok(const int err) { pms_check(err == NOISE_ERROR_NONE, "noise-c call in a test helper"); }
+
+Key32 x25519(const KeyPair& mine, const Key32& theirs) {
+    NoiseDHState* a = nullptr;
+    NoiseDHState* b = nullptr;
+    noise_ok(noise_dhstate_new_by_id(&a, NOISE_DH_CURVE25519));
+    noise_ok(noise_dhstate_new_by_id(&b, NOISE_DH_CURVE25519));
+    noise_ok(noise_dhstate_set_keypair(a, mine.private_key.data(), 32, mine.public_key.data(), 32));
+    noise_ok(noise_dhstate_set_public_key(b, theirs.data(), 32));
+    Key32 out{};
+    noise_ok(noise_dhstate_calculate(a, b, out.data(), out.size()));
+    noise_dhstate_free(a);
+    noise_dhstate_free(b);
+    return out;
+}
+
+// Message 1 (-> e, es, s, ss, payload) built token by token from the Noise spec with noise-c's SymmetricState, for a
+// phone that claims static key `claimed` and uses `ss` as DH(s, rs). With a small-order key ss is all zeros, so
+// anyone can build it: no private key is involved.
+Bytes forged_message1(const Key32& claimed, const Key32& ss, const Bytes& payload, const Key32& desktop_public,
+                      const std::span<const std::uint8_t> prologue) {
+    NoiseSymmetricState* raw_state = nullptr;
+    noise_ok(noise_symmetricstate_new_by_name(&raw_state, "Noise_IK_25519_ChaChaPoly_SHA256"));
+    const std::unique_ptr<NoiseSymmetricState, decltype(&noise_symmetricstate_free)> sym(raw_state, &noise_symmetricstate_free);
+    const auto encrypt_and_hash = [&](const Bytes& plain) {
+        std::vector<std::uint8_t> buffer(plain.size() + 16);
+        std::transform(plain.begin(), plain.end(), buffer.begin(), [](const std::byte b) { return static_cast<std::uint8_t>(b); });
+        NoiseBuffer inout;
+        noise_buffer_set_inout(inout, buffer.data(), plain.size(), buffer.size());
+        noise_ok(noise_symmetricstate_encrypt_and_hash(sym.get(), &inout));
+        buffer.resize(inout.size);
+        return buffer;
+    };
+    noise_ok(noise_symmetricstate_mix_hash(sym.get(), prologue.data(), prologue.size()));
+    noise_ok(noise_symmetricstate_mix_hash(sym.get(), desktop_public.data(), desktop_public.size()));  // <- s
+    const KeyPair e = pms::link::generate_keypair();
+    noise_ok(noise_symmetricstate_mix_hash(sym.get(), e.public_key.data(), e.public_key.size()));  // e
+    const Key32 es = x25519(e, desktop_public);
+    noise_ok(noise_symmetricstate_mix_key(sym.get(), es.data(), es.size()));  // es
+    Bytes claimed_bytes;
+    for (const auto b : claimed) {
+        claimed_bytes.push_back(static_cast<std::byte>(b));
+    }
+    const auto s = encrypt_and_hash(claimed_bytes);                          // s
+    noise_ok(noise_symmetricstate_mix_key(sym.get(), ss.data(), ss.size()));  // ss
+    const auto body = encrypt_and_hash(payload);
+    Bytes out;
+    for (const auto part : {std::span<const std::uint8_t>(e.public_key), std::span<const std::uint8_t>(s),
+                            std::span<const std::uint8_t>(body)}) {
+        for (const auto b : part) {
+            out.push_back(static_cast<std::byte>(b));
+        }
+    }
+    return out;
+}
 
 Bytes ascii(const std::string_view text) {
     Bytes out;
@@ -237,7 +300,8 @@ Bytes golden_ik_transcript() {
     MemoryPins pins;
     ResponderSession desktop(desk, uuid, pins);
     InitiatorSession phone_side(phone, desk.public_key, uuid);
-    desktop.open_pairing_window(token, 1000);
+    PairingWindow window(token, 1000);
+    desktop.open_pairing_window(window);
     const auto msg1 = phone_side.message1_first_pairing(token, model);
     Bytes msg2;
     const bool done = desktop.on_message1(msg1, 1000, msg2) == HandshakeResult::Established && phone_side.on_message2(msg2);
@@ -302,20 +366,26 @@ void run_link_session_tests() {
     MemoryPins pins;
     ResponderSession r(desk, uuid, pins);
     const std::array<std::uint8_t, 16> token{42};
-    r.open_pairing_window(token, 1000);
+    PairingWindow window(token, 1000);  // R11: one window per QR code, shared by every connection's session
+    r.open_pairing_window(window);
     InitiatorSession i(phone, desk.public_key, uuid);
     std::vector<std::byte> m2;
     pms_check(r.on_message1(i.message1_first_pairing(token, "Pixel 9"), 900, m2) == HandshakeResult::Established, "first pairing with the QR token");
     pms_check(i.on_message2(m2) && i.sas() == r.sas() && r.sas().size() == 6, "both sides derive the same 6-digit code");
     pms_check(pins.find(phone.public_key).has_value(), "phone key pinned");
+    pms_check(window.burned(), "the pairing burned the window");
     // Review Focus 1: the token is single use.
     ResponderSession r2(desk, uuid, pins);
+    r2.open_pairing_window(window);  // the same QR code, now burned
     InitiatorSession t(thief, desk.public_key, uuid);
     pms_check(r2.on_message1(t.message1_first_pairing(token, "Thief"), 901, m2) == HandshakeResult::Rejected, "a reused token is rejected");
+    pms_check(!pins.find(thief.public_key).has_value(), "the second phone is not pinned");
     // Expired window.
     ResponderSession r3(desk, uuid, pins);
-    r3.open_pairing_window(token, 1000);
+    PairingWindow fresh(token, 1000);
+    r3.open_pairing_window(fresh);
     pms_check(r3.on_message1(InitiatorSession(thief, desk.public_key, uuid).message1_first_pairing(token, "x"), 1001, m2) == HandshakeResult::Rejected, "expired window rejects");
+    pms_check(!fresh.burned(), "an expired attempt does not burn the window");
     // Review Focus 2: reconnect with the pin, no token.
     ResponderSession r4(desk, uuid, pins);
     InitiatorSession again(phone, desk.public_key, uuid);
@@ -353,7 +423,8 @@ void run_link_session_tests() {
     // The window is valid through its expiry second, needs the exact token, and one handshake per session.
     {
         ResponderSession edge(desk, uuid, pins);
-        edge.open_pairing_window(token, 1000);
+        PairingWindow edge_window(token, 1000);
+        edge.open_pairing_window(edge_window);
         InitiatorSession p(phone, desk.public_key, uuid);
         pms_check(edge.on_message1(p.message1_first_pairing(token, "Pixel 9"), 1000, m2) == HandshakeResult::Established,
                   "now == expiry is still inside the window");
@@ -363,7 +434,8 @@ void run_link_session_tests() {
         auto other_token = token;
         other_token[15] ^= 1U;
         ResponderSession wrong_token(desk, uuid, pins);
-        wrong_token.open_pairing_window(token, 1000);
+        PairingWindow wrong_token_window(token, 1000);
+        wrong_token.open_pairing_window(wrong_token_window);
         pms_check(wrong_token.on_message1(InitiatorSession(thief, desk.public_key, uuid).message1_first_pairing(other_token, "x"), 900, m2) ==
                       HandshakeResult::Rejected,
                   "a token differing in one bit is rejected");
@@ -402,7 +474,8 @@ void run_link_session_tests() {
         const auto msg1 = p.write_message(payload);
         pms_check(msg1.has_value(), "raw msg1 written");
         ResponderSession s(desk, uuid, pins);
-        s.open_pairing_window(token, 1000);
+        PairingWindow raw_window(token, 1000);
+        s.open_pairing_window(raw_window);
         return s.on_message1(*msg1, 900, m2);
     };
     pms_check(send_raw(payload_for(2, nullptr, "ok")) == HandshakeResult::Established, "the raw sender works");
@@ -421,6 +494,125 @@ void run_link_session_tests() {
         pms_check(send_raw(payload) == HandshakeResult::Rejected, what);
     }
     pins.unpin(thief.public_key);
+
+    // R11: one PairingWindow per QR code, shared by every connection's session. Only an Established kind 1 burns it.
+    {
+        const std::array<std::uint8_t, 16> code{7, 7, 7};
+        auto wrong_code = code;
+        wrong_code[0] ^= 0x80U;
+        PairingWindow shared(code, 1000);
+        const auto newcomer = generate_keypair(), second = generate_keypair();
+        const auto try_pair = [&](const KeyPair& who, const std::array<std::uint8_t, 16>& presented, const std::uint32_t now,
+                                  PinStore& store) {
+            ResponderSession s(desk, uuid, store);
+            s.open_pairing_window(shared);
+            return s.on_message1(InitiatorSession(who, desk.public_key, uuid).message1_first_pairing(presented, "Pixel 9"), now, m2);
+        };
+
+        // (b) A wrong token on a session in between does not burn it.
+        pms_check(try_pair(newcomer, wrong_code, 900, pins) == HandshakeResult::Rejected && !shared.burned(),
+                  "a wrong token is rejected and leaves the window open");
+        // (c) A reconnect while the window is open leaves it open and usable.
+        {
+            ResponderSession s(desk, uuid, pins);
+            s.open_pairing_window(shared);
+            pms_check(s.on_message1(InitiatorSession(phone, desk.public_key, uuid).message1_reconnect("Pixel 9"), 900, m2) ==
+                              HandshakeResult::Established &&
+                          !s.first_pairing() && !shared.burned(),
+                      "a reconnect does not touch the window");
+        }
+        // (d) Only Established burns: not an expired attempt, a malformed payload, a small-order key or a failed pin.
+        pms_check(try_pair(newcomer, code, 1001, pins) == HandshakeResult::Rejected && !shared.burned(),
+                  "an expired attempt does not burn the window");
+        {
+            NoiseIk raw_phone(Role::Initiator, newcomer, prologue, &desk.public_key);
+            const auto malformed = raw_phone.write_message(concat({payload_for(1, &code, "x"), Bytes{std::byte{0}}}));
+            ResponderSession s(desk, uuid, pins);
+            s.open_pairing_window(shared);
+            pms_check(malformed && s.on_message1(*malformed, 900, m2) == HandshakeResult::Rejected && !shared.burned(),
+                      "a malformed payload with the right token does not burn the window");
+        }
+        {
+            ResponderSession s(desk, uuid, pins);
+            s.open_pairing_window(shared);
+            const Key32 zero{};
+            pms_check(s.on_message1(forged_message1(zero, zero, payload_for(1, &code, "x"), desk.public_key, prologue), 900, m2) ==
+                              HandshakeResult::Rejected &&
+                          !shared.burned(),
+                      "a small-order key with the right token does not burn the window");
+        }
+        {
+            FailingPins failing;
+            bool threw = false;
+            try {
+                (void)try_pair(newcomer, code, 900, failing);
+            } catch (const std::runtime_error&) {
+                threw = true;
+            }
+            pms_check(threw && !shared.burned(), "a pin store failure propagates and leaves the window open");
+        }
+        // (a) The first phone pairs and burns it; a second phone with the same code on a new session is refused.
+        pms_check(try_pair(newcomer, code, 1000, pins) == HandshakeResult::Established && shared.burned() &&
+                      pins.find(newcomer.public_key).has_value(),
+                  "the first phone with the code pairs and burns the window");
+        pms_check(try_pair(second, code, 1000, pins) == HandshakeResult::Rejected && !pins.find(second.public_key).has_value(),
+                  "a second phone with the same code on a new session is refused");
+        // burn() closes a window early, e.g. when the QR code is hidden.
+        PairingWindow hidden(code, 1000);
+        hidden.burn();
+        ResponderSession s(desk, uuid, pins);
+        s.open_pairing_window(hidden);
+        pms_check(s.on_message1(InitiatorSession(second, desk.public_key, uuid).message1_first_pairing(code, "x"), 900, m2) ==
+                      HandshakeResult::Rejected,
+                  "a window closed with burn() refuses its code");
+        pins.unpin(newcomer.public_key);
+    }
+
+    // R12: a phone key of small order is refused before any pin lookup or pin. The forged message is otherwise valid:
+    // the same builder with a real key and its real ss is accepted.
+    {
+        const Key32 real_ss = x25519(phone, desk.public_key);
+        ResponderSession control(desk, uuid, pins);
+        pms_check(control.on_message1(forged_message1(phone.public_key, real_ss, payload_for(2, nullptr, "Pixel 9"), desk.public_key, prologue),
+                                      5000, m2) == HandshakeResult::Established,
+                  "the forging helper builds a valid message 1");
+        const Key32 zero{};
+        Key32 order8{};  // a point of order 8 (RFC 7748 / libsodium's blocklist)
+        const auto order8_bytes = from_hex("e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800");
+        std::copy(order8_bytes.begin(), order8_bytes.end(), order8.begin());
+        for (const auto& [key, what] : {std::pair{zero, "the all-zero phone key is rejected"}, std::pair{order8, "an order-8 phone key is rejected"}}) {
+            pins.pin(Pinned{key, "degenerate", 1});  // even a pinned one: the check comes before the lookup
+            const std::array<std::uint8_t, 16> code{9};
+            PairingWindow w(code, 1000);
+            ResponderSession reconnect(desk, uuid, pins);
+            ResponderSession pairing(desk, uuid, pins);
+            pairing.open_pairing_window(w);
+            pms_check(reconnect.on_message1(forged_message1(key, zero, payload_for(2, nullptr, "x"), desk.public_key, prologue), 5000, m2) ==
+                              HandshakeResult::Rejected &&
+                          pairing.on_message1(forged_message1(key, zero, payload_for(1, &code, "x"), desk.public_key, prologue), 900, m2) ==
+                              HandshakeResult::Rejected &&
+                          !w.burned(),
+                      what);
+            pins.unpin(key);
+        }
+        // Every small-order encoding (libsodium's blocklist, plus the top bit X25519 ignores) and no real key.
+        for (const char* hex : {"0000000000000000000000000000000000000000000000000000000000000000",
+                                "0100000000000000000000000000000000000000000000000000000000000000",
+                                "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+                                "5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157",
+                                "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+                                "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+                                "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+                                "0000000000000000000000000000000000000000000000000000000000000080",
+                                "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b880"}) {
+            Key32 k{};
+            const auto bytes = from_hex(hex);
+            std::copy(bytes.begin(), bytes.end(), k.begin());
+            pms_check(detail::small_order_public_key(k), hex);
+        }
+        pms_check(!detail::small_order_public_key(phone.public_key) && !detail::small_order_public_key(desk.public_key),
+                  "real keys are not small order");
+    }
 
     // Message 1 must fit one 512-byte pre-handshake frame: 96 bytes of Noise overhead plus the payload.
     {

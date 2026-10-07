@@ -31,7 +31,7 @@ struct PairingCode {
 [[nodiscard]] std::string encode_pairing(const PairingCode& code);  // "PMS1:" + 120 chars
 // nullopt for anything but exactly "PMS1:" + 120 canonical Base32 characters of a version-1 payload, or when
 // expiry_unix_s < now_unix_s. The phone passes now_unix_s = 0 (no expiry check): the desktop checks the window
-// against its own clock. Single use is the session's job too (ResponderSession burns the token).
+// against its own clock (PairingWindow), and single use is the session's job too (ResponderSession burns the window).
 [[nodiscard]] std::optional<PairingCode> decode_pairing(std::string_view text, std::uint32_t now_unix_s) noexcept;
 
 }  // namespace pms::link

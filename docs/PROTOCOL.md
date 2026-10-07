@@ -80,7 +80,15 @@ The payload ends exactly after the model. An unknown kind, a short token, a leng
 
 Message 1 must fit the one 512-byte frame the desktop reads before the handshake completes. Its Noise overhead is 96 bytes (32-byte ephemeral key, 48-byte encrypted static key, 16-byte tag), so the payload is at most 416 bytes: the model is at most 397 bytes for kind 1 and 413 bytes for kind 2. A phone with a longer model name shortens it, at a UTF-8 character boundary, before sending; the desktop refuses a message 1 over 512 bytes.
 
-The desktop accepts kind 1 only while a pairing window is open and only if the token matches (compared in constant time). The token is valid through its expiry second, checked by the desktop against its own clock; the phone does not reject a scanned code by expiry. On success the desktop burns the token, so a second phone presenting the same QR code is refused, and pins the phone's static public key together with the model and the pairing time (pairing the same phone again replaces its pin). Kind 2 is accepted only if the phone's static key is already pinned; the desktop keeps the pinned record as it is, including the model from the first pairing. In every other case the desktop closes the connection without replying.
+The desktop refuses a phone static key of small order, whatever the kind: the all-zero key, or any key whose X25519 result with a clamped scalar is all zeros. Every Diffie-Hellman result with such a key is zero, so a sender needs no private key to claim it. The check comes before any pin lookup or pin.
+
+Each QR code the desktop shows has one pairing window: its token and expiry. The window is shared by every connection the desktop accepts while that code is up, one handshake per connection, and has three rules:
+
+- Kind 1 is accepted only if the window is open, the expiry has not passed and the token matches (compared in constant time). The token is valid through its expiry second, checked by the desktop against its own clock; the phone does not reject a scanned code by expiry.
+- The first kind 1 handshake that completes burns the window. The desktop then pins the phone's static public key together with the model and the pairing time (pairing the same phone again replaces its pin). From then on a second phone presenting the same QR code, on any connection, is refused.
+- Nothing else burns the window: not a wrong token, not an expired or malformed attempt, not a refused small-order key, not a reconnect. The desktop also closes the window when it hides the code. If two phones race with the same code, only the first to complete is pinned, and if storing the pin fails the window stays open.
+
+Kind 2 is accepted only if the phone's static key is already pinned. It does not need or touch a pairing window. The desktop keeps the pinned record as it is, including the model from the first pairing. In every other case the desktop closes the connection without replying.
 
 Message 1 never carries a command, so replaying it cannot open a usable session.
 

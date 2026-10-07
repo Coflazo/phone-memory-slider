@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -31,23 +32,52 @@ public:
 
 enum class HandshakeResult : std::uint8_t { Continue, Established, Rejected };
 
+// One pairing QR code's token. The desktop creates it when it shows the code and hands it to every ResponderSession
+// it starts while the code is up; it must outlive those sessions. The first kind 1 handshake that is Established with
+// its token burns it, so the code pairs exactly one phone. A wrong token, an expired window, a rejected handshake or a
+// reconnect (kind 2) leaves it as it is. Sessions on different threads may share it.
+class PairingWindow {
+public:
+    // Valid through expiry_unix_s inclusive, by the desktop's clock (the now_unix_s given to on_message1).
+    PairingWindow(const std::array<std::uint8_t, 16>& token, std::uint32_t expiry_unix_s) noexcept;
+    ~PairingWindow();  // wipes the token
+    PairingWindow(const PairingWindow&) = delete;
+    PairingWindow& operator=(const PairingWindow&) = delete;
+
+    [[nodiscard]] bool burned() const noexcept;
+    void burn() noexcept;  // close it early, for example when the QR code is hidden
+
+private:
+    friend class ResponderSession;
+    enum State : std::uint8_t { Open, Committing, Burned };
+
+    // Open, now <= expiry and the token equal (compared in constant time).
+    [[nodiscard]] bool admits(const std::array<std::uint8_t, 16>& token, std::uint32_t now_unix_s) const noexcept;
+    [[nodiscard]] bool take() noexcept;  // Open -> Committing; false if another session got there first
+    void release() noexcept;             // Committing -> Open, when the pin could not be stored
+
+    std::array<std::uint8_t, 16> token_;
+    std::uint32_t expiry_unix_s_;
+    std::atomic<std::uint8_t> state_{Open};
+};
+
 namespace detail { class NoiseIk; }
 
 // Desktop side, one per connection.
 class ResponderSession {
 public:
     ResponderSession(KeyPair desktop, std::array<std::uint8_t, 16> service_uuid, PinStore& pins);
-    ~ResponderSession();
+    ~ResponderSession();  // wipes its copy of the desktop private key
     ResponderSession(const ResponderSession&) = delete;
     ResponderSession& operator=(const ResponderSession&) = delete;
 
-    // Accept a first pairing (msg1 kind 1) with this token through expiry_unix_s inclusive, by this session's clock.
-    void open_pairing_window(const std::array<std::uint8_t, 16>& token, std::uint32_t expiry_unix_s);
+    // Lets this session accept a first pairing (msg1 kind 1) through window. Without it only kind 2 can succeed.
+    void open_pairing_window(PairingWindow& window) noexcept;
     // msg1 plaintext payload = u8 kind (1 = first pairing with token, 2 = reconnect) | 16-byte token (kind 1) | string model.
-    // Established: msg2_out holds message 2. Kind 1 pinned the phone's key and burned the token (call
-    // open_pairing_window again for another pairing); kind 2 needed an existing pin. Rejected: msg2_out is empty,
-    // nothing was pinned or burned, and the session is dead. One call per session; it never returns Continue.
-    // An exception from PinStore propagates and leaves the session dead.
+    // Established: msg2_out holds message 2. Kind 1 burned the window and pinned the phone's key; kind 2 needed an
+    // existing pin. Rejected: msg2_out is empty, nothing was pinned or burned, and the session is dead. Phone keys of
+    // small order (all-zero DH output) are always rejected. One call per session; it never returns Continue. An
+    // exception from PinStore propagates, leaves the session dead and the window open.
     [[nodiscard]] HandshakeResult on_message1(std::span<const std::byte> msg1, std::uint32_t now_unix_s,
                                               std::vector<std::byte>& msg2_out);
     [[nodiscard]] bool first_pairing() const noexcept;  // Established by kind 1: the token is spent; show sas()
@@ -59,12 +89,10 @@ public:
     [[nodiscard]] std::optional<std::vector<std::byte>> open(std::span<const std::byte> ct);  // nullopt = close session
 
 private:
-    struct Window { std::array<std::uint8_t, 16> token{}; std::uint32_t expiry_unix_s{}; };
-
     KeyPair desktop_;
     std::array<std::uint8_t, 16> service_uuid_;
     PinStore& pins_;
-    std::optional<Window> window_;
+    PairingWindow* window_{nullptr};
     std::unique_ptr<detail::NoiseIk> noise_;
     Pinned peer_;
     bool used_{false};
