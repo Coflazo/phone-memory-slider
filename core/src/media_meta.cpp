@@ -85,7 +85,9 @@ template <class Int>
 constexpr std::size_t max_ifd_entries = 512;
 constexpr std::size_t max_ascii_bytes = 256;
 constexpr std::uint16_t type_ascii = 2;
+constexpr std::uint16_t type_long = 4;
 constexpr std::uint16_t type_undefined = 7;
+constexpr std::uint16_t type_ifd = 13;
 
 struct Reader {
     Bytes data;
@@ -183,7 +185,7 @@ void walk_ifd(const Reader& reader, const std::size_t ifd, Visit&& visit) noexce
 // "YYYY:MM:DD HH:MM:SS" plus optional OffsetTimeOriginal "+HH:MM"; local time is taken as UTC
 // without an offset. Returns 0 for anything malformed.
 [[nodiscard]] std::int64_t exif_time_ms(const std::string_view date, const std::string_view offset) noexcept {
-    if (date.size() < 19) {
+    if (date.size() < 19 || date[4] != ':' || date[7] != ':' || date[10] != ' ' || date[13] != ':' || date[16] != ':') {
         return 0;
     }
     const auto y = parse_int<unsigned>(date.substr(0, 4));
@@ -282,7 +284,11 @@ ExifFacts parse_exif(const std::span<const std::byte> tiff) noexcept {
         switch (entry.tag) {
             case 0x010F: facts.make = ascii(*reader, entry); break;
             case 0x0110: facts.model = ascii(*reader, entry); break;
-            case 0x8769: exif_ifd = reader->u32(entry.value_at); break;
+            case 0x8769:
+                if (entry.type == type_long || entry.type == type_ifd) {
+                    exif_ifd = reader->u32(entry.value_at);
+                }
+                break;
             default: break;
         }
     });

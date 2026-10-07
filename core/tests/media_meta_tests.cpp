@@ -5,23 +5,34 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 #include "pms/media_meta.hpp"
 #include "test_harness.hpp"
 
 namespace {
-struct Tiff {  // tiny big-endian TIFF writer for tests
+struct Tiff {  // tiny TIFF writer for tests, big-endian unless `little`
     std::vector<std::byte> b;
+    bool little{};
     void u8(int v) { b.push_back(static_cast<std::byte>(v)); }
-    void u16(int v) { u8(v >> 8); u8(v & 255); }
-    void u32(std::uint32_t v) { u16(int(v >> 16)); u16(int(v & 0xFFFF)); }
+    void u16(int v) {
+        if (little) { u8(v & 255); u8(v >> 8); } else { u8(v >> 8); u8(v & 255); }
+    }
+    void u32(std::uint32_t v) {
+        if (little) { u16(int(v & 0xFFFF)); u16(int(v >> 16)); } else { u16(int(v >> 16)); u16(int(v & 0xFFFF)); }
+    }
     void str(std::string_view s) { for (char c : s) u8(static_cast<unsigned char>(c)); }
-    void put32(std::size_t at, std::uint32_t v) { for (int i = 0; i < 4; ++i) b[at + i] = static_cast<std::byte>((v >> (24 - 8 * i)) & 255); }
+    void put32(std::size_t at, std::uint32_t v) {
+        for (int i = 0; i < 4; ++i) b[at + i] = static_cast<std::byte>((v >> (little ? 8 * i : 24 - 8 * i)) & 255);
+    }
 };
 
-std::vector<std::byte> apple_exif(std::string_view content_id, std::string_view burst) {
+// The outer TIFF and the MakerNote each declare their own byte order.
+std::vector<std::byte> apple_exif(std::string_view content_id, std::string_view burst, bool little_tiff = false,
+                                  bool little_note = false) {
     Tiff t;
-    t.str("MM"); t.u16(42); t.u32(8);
+    t.little = little_tiff;
+    t.str(little_tiff ? "II" : "MM"); t.u16(42); t.u32(8);
     // IFD0: Make, ExifIFD pointer
     t.u16(2);
     t.u16(0x010F); t.u16(2); t.u32(6); const auto make_off = t.b.size(); t.u32(0);
@@ -36,7 +47,8 @@ std::vector<std::byte> apple_exif(std::string_view content_id, std::string_view 
     t.u32(0);
     const auto mn = t.b.size();
     t.put32(mn_ptr, static_cast<std::uint32_t>(mn));
-    t.str("Apple iOS"); t.u8(0); t.u16(1); t.str("MM");
+    t.little = little_note;
+    t.str("Apple iOS"); t.u8(0); t.u8(0); t.u8(1); t.str(little_note ? "II" : "MM");
     t.u16(2);
     t.u16(0x000B); t.u16(2); t.u32(static_cast<std::uint32_t>(burst.size() + 1)); const auto burst_off = t.b.size(); t.u32(0);
     t.u16(0x0011); t.u16(2); t.u32(static_cast<std::uint32_t>(content_id.size() + 1)); const auto cid_off = t.b.size(); t.u32(0);
@@ -144,6 +156,25 @@ void run_media_meta_tests() {
               "OffsetTimeOriginal shifts local time to UTC");
     pms_check(pms::parse_exif(camera_exif("2024:02:30 07:08:09", "")).captured_unix_ms == 0, "impossible date is unknown");
     pms_check(pms::parse_exif(camera_exif("0000:00:00 00:00:00", "")).captured_unix_ms == 0, "zeroed date is unknown");
+
+    for (const auto [little_tiff, little_note] : {std::pair{true, false}, std::pair{false, true}}) {
+        const auto mixed = pms::parse_exif(apple_exif("ID-1", "BURST-2", little_tiff, little_note));
+        pms_check(mixed.make == "Apple" && mixed.content_identifier == "ID-1" && mixed.burst_uuid == "BURST-2",
+                  "MakerNote uses its own byte order, not the outer TIFF's");
+    }
+
+    pms_check(pms::parse_exif(camera_exif("2024-05-06 07:08:09", "")).captured_unix_ms == 0, "dashed date is unknown");
+    pms_check(pms::parse_exif(camera_exif("2024:05:06T07:08:09", "")).captured_unix_ms == 0, "T separator is unknown");
+    pms_check(pms::parse_exif(camera_exif("2024:05:06 07.08.09", "")).captured_unix_ms == 0, "dotted time is unknown");
+
+    // IFD0 entry 1 is the ExifIFD pointer; its type field is bytes 24-25.
+    auto short_ptr = camera_exif("2024:05:06 07:08:09", "");
+    short_ptr[25] = std::byte{3};  // SHORT
+    const auto ignored = pms::parse_exif(short_ptr);
+    pms_check(ignored.model == "Pixel 8" && ignored.captured_unix_ms == 0, "ExifIFD pointer that is not LONG/IFD is ignored");
+    auto ifd_ptr = camera_exif("2024:05:06 07:08:09", "");
+    ifd_ptr[25] = std::byte{13};  // IFD
+    pms_check(pms::parse_exif(ifd_ptr).captured_unix_ms == 1714979289000, "ExifIFD pointer of type IFD is followed");
 
     auto flood = exif;
     flood[8] = std::byte{0x02};  // IFD0 entry count 0x0201 = 513
