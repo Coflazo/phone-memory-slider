@@ -12,7 +12,9 @@ void run_preference_model_tests();
 void run_link_frames_tests();
 void run_link_messages_tests();
 void run_link_qr_tests();
+void run_link_session_tests();
 void write_link_golden_messages(const std::filesystem::path& dir);
+void write_link_golden_ik_transcript(const std::filesystem::path& dir);
 
 int main(int argc, char** argv) {
     try {
@@ -23,6 +25,7 @@ int main(int argc, char** argv) {
                 return 2;
             }
             write_link_golden_messages(argv[2]);
+            write_link_golden_ik_transcript(argv[2]);
             std::cout << "Golden fixtures written to " << argv[2] << '\n';
             return 0;
         }
@@ -35,6 +38,7 @@ int main(int argc, char** argv) {
         run_link_frames_tests();
         run_link_messages_tests();
         run_link_qr_tests();
+        run_link_session_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

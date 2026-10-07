@@ -5,13 +5,8 @@
 #include <type_traits>
 
 namespace pms::link {
-namespace {
 
-constexpr std::uint8_t media_image = 1;  // MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
-constexpr std::uint8_t media_video = 3;  // MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-
-// Strict UTF-8: no overlong forms, no surrogates, nothing above U+10FFFF.
-[[nodiscard]] bool valid_utf8(const std::string_view text) noexcept {
+bool valid_utf8(const std::string_view text) noexcept {
     std::size_t i = 0;
     while (i < text.size()) {
         const std::uint32_t lead = static_cast<unsigned char>(text[i]);
@@ -54,6 +49,11 @@ constexpr std::uint8_t media_video = 3;  // MediaStore.Files.FileColumns.MEDIA_T
     }
     return true;
 }
+
+namespace {
+
+constexpr std::uint8_t media_image = 1;  // MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+constexpr std::uint8_t media_video = 3;  // MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
 
 // Big-endian writer. Caps throw std::length_error; encode() checks everything else by decoding.
 class Writer {

@@ -1,6 +1,6 @@
 # Phone link protocol, version 1
 
-This document specifies how the Phone Memory Slider desktop app and its Android companion talk to each other. It is written so that a third party can build a compatible peer. The reference implementation is `core/include/pms/link/` (C++); `core/tests/fixtures/golden_messages.bin` holds byte-exact test vectors (see [Test vectors](#11-test-vectors)).
+This document specifies how the Phone Memory Slider desktop app and its Android companion talk to each other. It is written so that a third party can build a compatible peer. The reference implementation is `core/include/pms/link/` (C++); `core/tests/fixtures/` holds byte-exact test vectors for the messages and the handshake (see [Test vectors](#11-test-vectors)).
 
 The link never uses IP networking. The only transport is Bluetooth Classic RFCOMM.
 
@@ -50,9 +50,9 @@ The QR code holds the text `PMS1:` followed by the RFC 4648 Base32 encoding (alp
 | 55 | 16 | One-time pairing token |
 | 71 | 4 | Expiry, `u32` Unix seconds |
 
-The token is valid for 120 seconds and for one successful pairing. The phone accepts only the exact text: `PMS1:` in capitals, then exactly 120 characters of the alphabet, nothing before or after. It refuses a code with another prefix, another length, a payload version other than 1, any character outside the alphabet (lowercase letters, `0`, `1`, `8`, `9`, `=` padding, whitespace), or an expiry earlier than its current Unix time; a code is valid through its expiry second. 75 bytes are exactly 600 bits, so the 120 characters carry no spare bits. There is no checksum beyond the QR code's own error correction: a misread MAC, UUID, key or token fails the connection or the handshake, and the desktop enforces its own copy of the expiry.
+The token is valid for 120 seconds and for one successful pairing. The phone accepts only the exact text: `PMS1:` in capitals, then exactly 120 characters of the alphabet, nothing before or after. It refuses a code with another prefix, another length, a payload version other than 1, or any character outside the alphabet (lowercase letters, `0`, `1`, `8`, `9`, `=` padding, whitespace). A code is valid through its expiry second, checked by the desktop against its own clock; the phone does not reject a scanned code by expiry, so a phone clock that runs fast cannot refuse a valid code. 75 bytes are exactly 600 bits, so the 120 characters carry no spare bits. There is no checksum beyond the QR code's own error correction: a misread MAC, UUID, key or token fails the connection or the handshake.
 
-Test vector: the payload whose every byte equals its offset (version `1` at offset 0, MAC `01:02:03:04:05:06`, UUID bytes `07` to `16`, key bytes `17` to `36`, token bytes `37` to `46`, expiry `0x4748494A`) is the text
+Test vector: the payload whose every byte equals its offset (byte values in hex: version `01` at offset 0, MAC `01:02:03:04:05:06`, UUID bytes `07` to `16`, key bytes `17` to `36`, token bytes `37` to `46`, expiry `0x4748494A`) is the text
 
 ```
 PMS1:AEAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSAIJCEMSCKJRHFAUSUKZMFUXC6MBRGIZTINJWG44DSOR3HQ6T4P2AIFBEGRCFIZDUQSKK
@@ -76,13 +76,17 @@ The Noise payload of message 1 (encrypted to the desktop's static key) is:
 | token | 16 bytes | Present only when kind = 1: the token from the QR code |
 | model | `string` | Phone model, for example `Pixel 9` |
 
-The desktop accepts kind 1 only while a pairing window is open, before the window's expiry, and only if the token matches (compared in constant time). It then burns the token, so a second phone presenting the same QR code is refused, and pins the phone's static public key together with the model and the pairing time. Kind 2 is accepted only if the phone's static key is already pinned. In every other case the desktop closes the connection without replying.
+The payload ends exactly after the model. An unknown kind, a short token, a length that runs past the end, bytes after the model or a model that is not well-formed UTF-8 is refused.
+
+Message 1 must fit the one 512-byte frame the desktop reads before the handshake completes. Its Noise overhead is 96 bytes (32-byte ephemeral key, 48-byte encrypted static key, 16-byte tag), so the payload is at most 416 bytes: the model is at most 397 bytes for kind 1 and 413 bytes for kind 2. A phone with a longer model name shortens it, at a UTF-8 character boundary, before sending; the desktop refuses a message 1 over 512 bytes.
+
+The desktop accepts kind 1 only while a pairing window is open and only if the token matches (compared in constant time). The token is valid through its expiry second, checked by the desktop against its own clock; the phone does not reject a scanned code by expiry. On success the desktop burns the token, so a second phone presenting the same QR code is refused, and pins the phone's static public key together with the model and the pairing time (pairing the same phone again replaces its pin). Kind 2 is accepted only if the phone's static key is already pinned; the desktop keeps the pinned record as it is, including the model from the first pairing. In every other case the desktop closes the connection without replying.
 
 Message 1 never carries a command, so replaying it cannot open a usable session.
 
 ### Message 2, desktop to phone
 
-The Noise payload of message 2 is empty. After it, both sides split the handshake into one transport cipher per direction.
+The Noise payload of message 2 is empty; the phone treats a message 2 with a payload as a failed handshake. After it, both sides split the handshake into one transport cipher per direction.
 
 After sending message 2 the desktop sends nothing until it has received the phone's `Hello`. The phone reads message 2 under the same one-frame rule (section 5), so a frame sent right behind message 2 could arrive before the phone has processed it and fail the phone's decoder. The phone's `Hello` is the first transport message in either direction.
 
@@ -359,3 +363,30 @@ The sender of a code marked Closed closes the connection right after sending it.
 ## 11. Test vectors
 
 `core/tests/fixtures/golden_messages.bin` holds one plaintext message of every type, in ascending type order, each preceded by its `u16` big-endian length. It is not a frame stream: some plaintext messages, such as `Bye`, are shorter than the 16-byte frame minimum. The field values are in `golden_set()` in `core/tests/link_messages_tests.cpp`. A compatible encoder reproduces the file byte for byte, and a compatible decoder accepts every message in it. The C++ test suite checks the file on every run; regenerate it with `pms_core_tests --write-golden core/tests/fixtures` only for a deliberate protocol change.
+
+`core/tests/fixtures/golden_ik_transcript.bin` is one first pairing (kind 1) followed by four transport messages, generated from fixed keys by the reference sessions. It is 22 fields back to back, each a `u16` big-endian length followed by that many bytes:
+
+| # | Field | Bytes |
+|---|---|---|
+| 1 | Desktop static private key | 32 |
+| 2 | Desktop static public key | 32 |
+| 3 | Desktop ephemeral private key | 32 |
+| 4 | Phone static private key | 32 |
+| 5 | Phone static public key | 32 |
+| 6 | Phone ephemeral private key | 32 |
+| 7 | Service UUID | 16 |
+| 8 | Prologue (`PMS/1` + UUID) | 21 |
+| 9 | Token | 16 |
+| 10 | Model, UTF-8 (`Pixel 9`) | 7 |
+| 11 | Message 1 payload (kind 1, token, model) | 26 |
+| 12 | Message 1 | 122 |
+| 13 | Message 2 | 48 |
+| 14 | Short authentication string, 6 ASCII digits | 6 |
+| 15, 16 | Transport 1, phone to desktop: plaintext `phone 1`, ciphertext | 7, 23 |
+| 17, 18 | Transport 2, desktop to phone: plaintext `desktop 1`, ciphertext | 9, 25 |
+| 19, 20 | Transport 3, phone to desktop: plaintext `phone 2`, ciphertext | 7, 23 |
+| 21, 22 | Transport 4, desktop to phone: empty plaintext, ciphertext (a bare tag) | 0, 16 |
+
+The private keys are the bytes `00`..`1F` (desktop static), `20`..`3F` (desktop ephemeral), `40`..`5F` (phone static) and `60`..`7F` (phone ephemeral), each clamped as X25519 clamps (first byte `& F8`, last byte `& 7F | 40`). The token is `A0`..`AF` and the UUID is `8f4d9d6a-0c84-4a7f-a36a-6fc12c4b34bf`. A compatible phone, given fields 4, 6, 2, 7, 9 and 10 (its keys with the ephemeral key fixed, the desktop key, UUID, token and model), produces message 1 byte for byte, accepts message 2, shows the same 6 digits, and seals and opens the transport messages identically; a compatible desktop does the same from its side. The C++ suite checks the file on every run and regenerates it with `pms_core_tests --write-golden core/tests/fixtures`. An independent implementation of the Noise specification reproduces it.
+
+`core/tests/fixtures/cacophony_ik.txt` holds the Cacophony vector for `Noise_IK_25519_ChaChaPoly_SHA256` (source and filter in its header). The reference handshake reproduces its messages, handshake hash and transport messages byte for byte.

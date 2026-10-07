@@ -9,8 +9,19 @@ add_executable(pms_core_tests
   link_frames_tests.cpp
   link_messages_tests.cpp
   link_qr_tests.cpp
+  link_session_tests.cpp
 )
 
-target_link_libraries(pms_core_tests PRIVATE pms_core)
+# The tests' own copy of the link session, built with PMS_LINK_TEST_HOOKS: set_fixed_ephemeral_for_tests exists only
+# here. The app links pms_link (core/CMakeLists.txt), compiled without the hook.
+add_library(pms_link_testing STATIC
+  ${PROJECT_SOURCE_DIR}/core/src/link/noise_ik.cpp
+  ${PROJECT_SOURCE_DIR}/core/src/link/session.cpp
+)
+target_compile_definitions(pms_link_testing PUBLIC PMS_LINK_TEST_HOOKS)
+target_link_libraries(pms_link_testing PUBLIC pms_core PRIVATE noise_c)
+
+target_link_libraries(pms_core_tests PRIVATE pms_core pms_link_testing)
+target_include_directories(pms_core_tests PRIVATE ${PROJECT_SOURCE_DIR}/core/src)  # internal link/noise_ik.hpp
 target_compile_definitions(pms_core_tests PRIVATE PMS_TEST_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME pms_core_tests COMMAND pms_core_tests)

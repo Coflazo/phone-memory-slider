@@ -6,6 +6,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -57,5 +58,7 @@ struct Message { MsgType type{}; std::uint32_t request_id{}; Body body; };
 [[nodiscard]] std::vector<std::byte> encode(const Message& m);
 // nullopt on any violation: unknown type, overrun, cap, enum or boolean out of range, invalid UTF-8, trailing bytes.
 [[nodiscard]] std::optional<Message> decode(std::span<const std::byte> plaintext) noexcept;
+// The `string` rule of docs/PROTOCOL.md section 1: no overlong forms, no surrogates, nothing above U+10FFFF.
+[[nodiscard]] bool valid_utf8(std::string_view text) noexcept;
 
 }  // namespace pms::link
