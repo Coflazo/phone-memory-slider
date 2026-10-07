@@ -7,6 +7,7 @@ add_library(pms_core STATIC
   src/preference_model.cpp
   src/link/frames.cpp
   src/link/messages.cpp
+  src/link/qr.cpp
 )
 
 target_include_directories(pms_core PUBLIC include)

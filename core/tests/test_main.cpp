@@ -11,6 +11,7 @@ void run_media_analysis_tests();
 void run_preference_model_tests();
 void run_link_frames_tests();
 void run_link_messages_tests();
+void run_link_qr_tests();
 void write_link_golden_messages(const std::filesystem::path& dir);
 
 int main(int argc, char** argv) {
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
         run_preference_model_tests();
         run_link_frames_tests();
         run_link_messages_tests();
+        run_link_qr_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

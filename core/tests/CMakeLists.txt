@@ -8,6 +8,7 @@ add_executable(pms_core_tests
   review_queue_tests.cpp
   link_frames_tests.cpp
   link_messages_tests.cpp
+  link_qr_tests.cpp
 )
 
 target_link_libraries(pms_core_tests PRIVATE pms_core)
