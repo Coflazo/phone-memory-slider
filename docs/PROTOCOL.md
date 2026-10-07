@@ -50,7 +50,13 @@ The QR code holds the text `PMS1:` followed by the RFC 4648 Base32 encoding (alp
 | 55 | 16 | One-time pairing token |
 | 71 | 4 | Expiry, `u32` Unix seconds |
 
-The token is valid for 120 seconds and for one successful pairing. The phone refuses a code with another prefix, another length, a payload version other than 1, a character outside the alphabet, or an expiry in the past.
+The token is valid for 120 seconds and for one successful pairing. The phone accepts only the exact text: `PMS1:` in capitals, then exactly 120 characters of the alphabet, nothing before or after. It refuses a code with another prefix, another length, a payload version other than 1, any character outside the alphabet (lowercase letters, `0`, `1`, `8`, `9`, `=` padding, whitespace), or an expiry earlier than its current Unix time; a code is valid through its expiry second. 75 bytes are exactly 600 bits, so the 120 characters carry no spare bits. There is no checksum beyond the QR code's own error correction: a misread MAC, UUID, key or token fails the connection or the handshake, and the desktop enforces its own copy of the expiry.
+
+Test vector: the payload whose every byte equals its offset (version `1` at offset 0, MAC `01:02:03:04:05:06`, UUID bytes `07` to `16`, key bytes `17` to `36`, token bytes `37` to `46`, expiry `0x4748494A`) is the text
+
+```
+PMS1:AEAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSAIJCEMSCKJRHFAUSUKZMFUXC6MBRGIZTINJWG44DSOR3HQ6T4P2AIFBEGRCFIZDUQSKK
+```
 
 The QR code contains the desktop's real Bluetooth MAC address. Blur it in screenshots and recordings.
 
@@ -77,6 +83,8 @@ Message 1 never carries a command, so replaying it cannot open a usable session.
 ### Message 2, desktop to phone
 
 The Noise payload of message 2 is empty. After it, both sides split the handshake into one transport cipher per direction.
+
+After sending message 2 the desktop sends nothing until it has received the phone's `Hello`. The phone reads message 2 under the same one-frame rule (section 5), so a frame sent right behind message 2 could arrive before the phone has processed it and fail the phone's decoder. The phone's `Hello` is the first transport message in either direction.
 
 ### Short authentication string
 
@@ -128,7 +136,7 @@ A message that is well formed but arrives in the wrong direction, out of order, 
 
 Session order:
 
-1. The phone sends `Hello`.
+1. The phone sends `Hello`. Until it arrives the desktop sends nothing (section 4).
 2. The desktop answers `HelloAck`, or sends `Error` `0x0002` and closes if it cannot speak the phone's protocol version.
 3. The desktop sends requests; the phone answers them. In protocol 1 the phone sends no requests.
 4. Either side may send `Bye` and close.
@@ -246,7 +254,7 @@ The phone answers a `KeyframesRequest` with exactly one `Keyframes` message carr
 
 | Field | Type | Notes |
 |---|---|---|
-| items | `list<TrashItem>` | At most 500 |
+| items | `list<TrashItem>` | 1 to 500 items; an empty list is a violation |
 
 TrashItem, 56 bytes:
 

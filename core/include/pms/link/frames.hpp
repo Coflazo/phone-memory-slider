@@ -26,7 +26,8 @@ class FrameDecoder {
 public:
     explicit FrameDecoder(std::size_t max_payload) noexcept;
     void set_max_payload(std::size_t max_payload) noexcept;
-    // Appends bytes; returns false (and stays failed) on a length above the cap.
+    // Appends bytes; returns false (and stays failed) on a length below min_frame or above the cap, or, while the
+    // cap is at most max_preauth_frame, on a second frame that starts before next() has taken the first.
     [[nodiscard]] bool feed(std::span<const std::byte> bytes);
     // The oldest complete frame, or nullopt if none is complete or the decoder has failed.
     [[nodiscard]] std::optional<std::vector<std::byte>> next();

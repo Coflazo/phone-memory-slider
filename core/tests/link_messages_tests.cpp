@@ -246,7 +246,10 @@ void run_link_messages_tests() {
 
     // Decode-side caps on hand-built bytes: the cap itself is accepted, one past it is refused.
     pms_check(decode(id_list(16)) && !decode(id_list(17)) && !decode(id_list(0)), "id lists hold 1 to 16 ids");
-    pms_check(decode(trash_request(500)) && !decode(trash_request(501)), "trash requests hold at most 500 items");
+    pms_check(decode(trash_request(500)) && !decode(trash_request(501)) && !decode(trash_request(0)), "trash requests hold 1 to 500 items");
+    threw = false;
+    try { (void)encode({MsgType::TrashRequest, 1, TrashRequest{}}); } catch (const std::invalid_argument&) { threw = true; }
+    pms_check(threw, "an empty trash request is refused at encode");
     pms_check(decode(keyframes(8)) && !decode(keyframes(9)), "at most 8 keyframes");
     pms_check(decode(keyframes_request(8)) && !decode(keyframes_request(9)) && !decode(keyframes_request(0)), "keyframe requests ask for 1 to 8 frames");
     pms_check(decode(catalog_since(2000)) && !decode(catalog_since(2001)), "max_items is at most 2000");
