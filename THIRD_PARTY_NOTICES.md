@@ -15,3 +15,11 @@ The application uses Qt 6. Licensing depends on how binaries are distributed and
 ## OpenSSL
 
 Non-Windows recovery-vault builds use OpenSSL 3. See https://www.openssl.org/source/license.html. Windows uses native BCrypt and DPAPI instead.
+
+## noise-c
+
+Copyright (C) 2016 Southern Storm Software, Pty Ltd. MIT License; the full text is at `third_party/noise-c/LICENSE`.
+
+The phone link's Noise handshake uses a subset of noise-c (Signal's fork, commit `6d940358181c0b1d9355521aebd0d5dc6ca0d0f9`), including curve25519-donna and poly1305-donna (MIT or public domain) and ed25519-donna (public domain). Source and file list: `third_party/noise-c/README.md`.
+
+Source: https://github.com/signalapp/noise-c

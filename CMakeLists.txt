@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(PhoneMemorySlider VERSION 1.0.0 LANGUAGES CXX)
+project(PhoneMemorySlider VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CPACK_PACKAGE_NAME "PhoneMemorySlider")
 set(CPACK_PACKAGE_VENDOR "Phone Memory Slider contributors")
@@ -28,6 +28,7 @@ else()
   add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
+add_subdirectory(third_party/noise-c)
 add_subdirectory(core)
 add_subdirectory(tools)
 

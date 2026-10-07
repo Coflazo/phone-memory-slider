@@ -1,0 +1,2 @@
+# Keep vendored bytes exactly as upstream ships them, so the SHA-256 list in README.md matches a checkout.
+* -text
