@@ -1,0 +1,8 @@
+# Default gitleaks rules, plus one narrow exception.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Figma document ids are public share links (access is set in Figma), not credentials"
+regexTarget = "line"
+regexes = ['''"figmaFileKey"\s*:''']

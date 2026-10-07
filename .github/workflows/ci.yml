@@ -62,6 +62,13 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Offline proof (tests inside a network namespace with no interfaces)
+        if: runner.os == 'Linux'
+        run: |
+          sudo -E unshare --net -- sudo -E -u "$USER" env "PATH=$PATH" "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" QT_QPA_PLATFORM=offscreen bash -c '
+            if curl -sS -m 5 https://example.com -o /dev/null 2>/dev/null; then echo "canary reached the network: namespace is not isolated"; exit 1; fi
+            echo "canary blocked as expected"
+            ctest --test-dir build -C Release --output-on-failure'
       - name: Smoke-test desktop shell
         env:
           QT_QPA_PLATFORM: offscreen
@@ -110,6 +117,8 @@ jobs:
           java-version: '17'
           cache: gradle
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: 'platform-tools'
       - name: Install Android SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Test, lint, and assemble offline companion
