@@ -1,5 +1,6 @@
 add_executable(pms_core_tests
   test_main.cpp
+  embeddings_tests.cpp
   fixture_catalog_tests.cpp
   media_analysis_tests.cpp
   media_format_tests.cpp
