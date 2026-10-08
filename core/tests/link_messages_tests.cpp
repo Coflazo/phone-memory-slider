@@ -56,6 +56,16 @@ Bytes trash_request(const std::size_t n) {
     return b;
 }
 
+Bytes trash_result(const std::size_t n) {
+    auto b = header_bytes(0x21);
+    put(b, n, 2);
+    for (std::size_t i = 0; i < n; ++i) {
+        put(b, i + 1, 8);  // id
+        put(b, 0, 1);      // Trashed
+    }
+    return b;
+}
+
 Bytes keyframes(const std::size_t n) {
     auto b = header_bytes(0x15);
     put(b, 1, 8);  // id
@@ -250,6 +260,10 @@ void run_link_messages_tests() {
     threw = false;
     try { (void)encode({MsgType::TrashRequest, 1, TrashRequest{}}); } catch (const std::invalid_argument&) { threw = true; }
     pms_check(threw, "an empty trash request is refused at encode");
+    pms_check(decode(trash_result(500)) && !decode(trash_result(501)) && !decode(trash_result(0)), "trash results hold 1 to 500 entries");
+    threw = false;
+    try { (void)encode({MsgType::TrashResult, 1, TrashResult{}}); } catch (const std::invalid_argument&) { threw = true; }
+    pms_check(threw, "an empty trash result is refused at encode");
     pms_check(decode(keyframes(8)) && !decode(keyframes(9)), "at most 8 keyframes");
     pms_check(decode(keyframes_request(8)) && !decode(keyframes_request(9)) && !decode(keyframes_request(0)), "keyframe requests ask for 1 to 8 frames");
     pms_check(decode(catalog_since(2000)) && !decode(catalog_since(2001)), "max_items is at most 2000");

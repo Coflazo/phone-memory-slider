@@ -47,7 +47,7 @@ struct Keyframes { std::uint64_t id{}; ItemStatus status{}; std::vector<std::vec
 struct Hash { std::uint64_t id{}; ItemStatus status{}; std::array<std::uint8_t, 32> sha256{}; };
 struct TrashItem { std::uint64_t id{}; std::uint64_t size{}; std::int64_t date_modified_s{}; std::array<std::uint8_t, 32> sha256{}; };
 struct TrashRequest { std::vector<TrashItem> items; };                              // 1 to 500
-struct TrashResult { std::vector<std::pair<std::uint64_t, TrashOutcome>> items; };
+struct TrashResult { std::vector<std::pair<std::uint64_t, TrashOutcome>> items; };  // 1 to 500
 struct ErrorMsg { std::uint16_t code{}; std::string message; };
 using Body = std::variant<Hello, HelloAck, CatalogSince, CatalogPage, IdList, Preview, KeyframesRequest, Keyframes, Hash,
                           TrashRequest, TrashResult, ErrorMsg, std::monostate /*Bye*/>;

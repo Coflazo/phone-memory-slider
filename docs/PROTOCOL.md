@@ -281,7 +281,7 @@ TrashItem, 56 bytes:
 
 | Field | Type | Notes |
 |---|---|---|
-| items | `list<TrashEntry>` | One entry per requested item, in request order. At most 500. |
+| items | `list<TrashEntry>` | One entry per requested item, in request order: 1 to 500 entries; an empty list is a violation |
 
 TrashEntry, 9 bytes: `id` (`u64`) then `outcome` (`u8`):
 

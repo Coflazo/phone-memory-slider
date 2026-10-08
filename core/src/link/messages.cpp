@@ -355,7 +355,10 @@ void write_value(Writer& w, const TrashRequest& v) { write_list(w, v.items, max_
 }
 
 void write_value(Writer& w, const TrashResult& v) { write_list(w, v.items, max_trash_items); }
-[[nodiscard]] bool read_value(Reader& r, TrashResult& v) { return read_list(r, v.items, max_trash_items); }
+// A result answers a non-empty request, so an empty one is a violation too.
+[[nodiscard]] bool read_value(Reader& r, TrashResult& v) {
+    return read_list(r, v.items, max_trash_items) && !v.items.empty();
+}
 
 void write_value(Writer& w, const ErrorMsg& v) {
     w.num(v.code);
