@@ -174,8 +174,9 @@ void run_embeddings_tests() {
     pms_check(throws_invalid_argument([] { (void)pms::EmbeddingMatrix::from_raw(0, {}); }), "dim 0 throws in from_raw");
     pms_check(throws_invalid_argument([] { (void)pms::EmbeddingMatrix(0); }), "dim 0 throws");
 
-    // Moving hands over the buffer without copying 384 MB.
+    // Moving hands over the buffer without copying 384 MB, and copying does not compile.
     static_assert(std::is_nothrow_move_constructible_v<pms::EmbeddingMatrix> && std::is_nothrow_move_assignable_v<pms::EmbeddingMatrix>);
+    static_assert(!std::is_copy_constructible_v<pms::EmbeddingMatrix> && !std::is_copy_assignable_v<pms::EmbeddingMatrix>);
     const std::uint16_t* data = e.raw().data();
     pms::EmbeddingMatrix moved = std::move(e);
     pms_check(moved.raw().data() == data && moved.rows() == 2, "moving keeps the same buffer");

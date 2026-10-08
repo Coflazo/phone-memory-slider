@@ -15,10 +15,15 @@ namespace pms {
 [[nodiscard]] float float_from_half(std::uint16_t half) noexcept;  // exact: every half is a float
 
 // Row-major unit vectors stored as fp16 (250,000 SigLIP2 rows x 768 = 384 MB); all arithmetic is fp32.
-// Copyable, and moving hands over the buffer.
+// Move-only, so 384 MB is never copied by accident; moving hands over the buffer. A deliberate copy is
+// from_raw(m.dim(), {m.raw().begin(), m.raw().end()}).
 class EmbeddingMatrix {
 public:
     explicit EmbeddingMatrix(std::size_t dim = 768);  // throws std::invalid_argument for dim 0
+    EmbeddingMatrix(const EmbeddingMatrix&) = delete;
+    EmbeddingMatrix& operator=(const EmbeddingMatrix&) = delete;
+    EmbeddingMatrix(EmbeddingMatrix&&) noexcept = default;
+    EmbeddingMatrix& operator=(EmbeddingMatrix&&) noexcept = default;
 
     // L2-normalizes in double, then stores fp16. Throws std::invalid_argument, leaving the matrix unchanged,
     // for a size other than dim(), a non-finite value or the zero vector.
@@ -36,7 +41,7 @@ public:
     // The stored halves, rows() * dim() of them; from_raw takes them back bit for bit. from_raw throws
     // std::invalid_argument for dim 0, a size that is not a multiple of dim, or an inf or NaN half.
     [[nodiscard]] std::span<const std::uint16_t> raw() const noexcept;
-    static EmbeddingMatrix from_raw(std::size_t dim, std::vector<std::uint16_t> halves);
+    [[nodiscard]] static EmbeddingMatrix from_raw(std::size_t dim, std::vector<std::uint16_t> halves);
 
 private:
     std::size_t dim_;
