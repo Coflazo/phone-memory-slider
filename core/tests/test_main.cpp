@@ -14,6 +14,7 @@ void run_quality_tests();
 void run_pdq_tests();
 void run_embeddings_tests();
 void run_taste_tests();
+void run_delete_model_tests();
 
 int main() {
     try {
@@ -30,6 +31,7 @@ int main() {
         run_pdq_tests();
         run_embeddings_tests();
         run_taste_tests();
+        run_delete_model_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

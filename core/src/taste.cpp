@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <utility>
 
+#include "logistic.hpp"
+
 namespace pms {
 namespace {
 
@@ -51,9 +53,9 @@ double taste_objective(std::span<const float> rows, std::size_t dim, std::span<c
         const float* xi = rows.data() + i * dim;
         double z = b;
         for (std::size_t j = 0; j < dim; ++j) z += double(w[j]) * xi[j];
-        const double e = std::exp(-std::abs(z));                 // in (0, 1], so it never overflows
-        f += std::max(z, 0.0) + std::log1p(e) - y[i] * z;        // softplus(z) - y z
-        const double r = (z >= 0 ? 1.0 : e) / (1.0 + e) - y[i];  // sigmoid(z) - y
+        const auto [softplus, sigmoid] = detail::logistic(z);
+        f += softplus - y[i] * z;
+        const double r = sigmoid - y[i];
         gb += r;
         for (std::size_t j = 0; j < dim; ++j) gw[j] += r * xi[j];
     }
