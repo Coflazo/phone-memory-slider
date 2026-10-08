@@ -7,6 +7,8 @@ add_library(pms_desktop STATIC
   src/device_connector.hpp
   src/face_presence_detector.cpp
   src/face_presence_detector.hpp
+  src/library/library.cpp
+  src/library/library.hpp
   src/phone_client.cpp
   src/phone_client.hpp
   src/platform/reduced_motion.cpp
