@@ -62,7 +62,7 @@ int main() {
 
     std::cout << "{\"assets\":" << asset_count << ",\"model_and_rank_ms\":" << elapsed_ms
               << ",\"estimated_bytes\":" << estimated_bytes << ",\"taste_train_ms\":" << taste_ms
-              << ",\"taste_iterations\":" << report.loss.size() - 1 << "}\n";
+              << ",\"taste_iterations\":" << (report.loss.empty() ? 0 : report.loss.size() - 1) << "}\n";
     return ranked.size() == asset_count && model.enabled() && elapsed < std::chrono::seconds{2} &&
                    estimated_bytes < 1'500'000'000
                ? 0

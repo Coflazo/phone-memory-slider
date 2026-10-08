@@ -1,6 +1,7 @@
 #include "pms/taste.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <deque>
 #include <iterator>
@@ -74,33 +75,45 @@ TasteModel train_taste(const EmbeddingMatrix& x, const std::span<const std::size
     constexpr double c1 = 1e-4;               // Armijo: accept a step that achieves 1e-4 of the predicted decrease
     constexpr int max_halvings = 40;
 
-    std::vector<bool> listed(x.rows());  // each row in at most one list, once
-    for (const auto list : {positives, negatives, unlabeled})
-        for (const std::size_t row : list) {
-            if (row >= x.rows() || listed[row])
-                throw std::invalid_argument("train_taste: a row is missing or listed twice");
-            listed[row] = true;
+    if (!std::isfinite(config.l2) || config.l2 < 0.0F || !std::isfinite(config.tolerance) || config.tolerance < 0.0F ||
+        config.max_iterations <= 0)
+        throw std::invalid_argument("train_taste: l2 and tolerance must be finite and >= 0, max_iterations > 0");
+
+    // Each row sits in at most one list. A repeat within a list is dropped (first occurrence kept, order kept), so
+    // lists without repeats train exactly as given.
+    std::vector<std::uint8_t> list_of(x.rows(), 0);  // 0: unlisted, else 1 + the list's number
+    std::array<std::vector<std::size_t>, 3> lists;
+    const std::array given{positives, negatives, unlabeled};
+    for (std::size_t k = 0; k < given.size(); ++k)
+        for (const std::size_t row : given[k]) {
+            if (row >= x.rows()) throw std::invalid_argument("train_taste: a row is past the matrix");
+            if (list_of[row] == 0) {
+                list_of[row] = static_cast<std::uint8_t>(k + 1);
+                lists[k].push_back(row);
+            } else if (list_of[row] != k + 1) {
+                throw std::invalid_argument("train_taste: a row sits in two lists");
+            }
         }
+    const auto& [pos, neg, unl] = lists;
 
     // y = 0 rows: every negative, then a seeded, order-keeping sample of at most unlabeled_cap unlabeled rows.
-    std::vector<std::size_t> zeros(negatives.begin(), negatives.end());
+    std::vector<std::size_t> zeros(neg);
     std::mt19937_64 rng(config.seed);
-    std::ranges::sample(unlabeled, std::back_inserter(zeros),
-                        static_cast<std::ptrdiff_t>(std::min(config.unlabeled_cap, unlabeled.size())), rng);
+    std::ranges::sample(unl, std::back_inserter(zeros), static_cast<std::ptrdiff_t>(std::min(config.unlabeled_cap, unl.size())), rng);
     if (report != nullptr)
-        *report = TasteReport{.loss = {}, .positives = positives.size(), .negatives = negatives.size(),
-                              .unlabeled_used = zeros.size() - negatives.size()};
+        *report = TasteReport{.loss = {}, .positives = pos.size(), .negatives = neg.size(),
+                              .unlabeled_used = zeros.size() - neg.size(), .stop = TasteStop::Untrainable, .trained = false};
 
     const std::size_t dim = x.dim();
     TasteModel model{std::vector<float>(dim, 0.0F), 0.0F};
-    if (positives.empty() || zeros.empty()) return model;
+    if (pos.empty() || zeros.empty()) return model;
 
     // Dense float rows, widened from fp16 once: positives (y = 1), then zeros (y = 0).
-    const std::size_t n = positives.size() + zeros.size();
+    const std::size_t n = pos.size() + zeros.size();
     std::vector<float> rows(n * dim), y(n, 0.0F);
-    std::fill_n(y.begin(), positives.size(), 1.0F);
+    std::fill_n(y.begin(), pos.size(), 1.0F);
     std::size_t i = 0;
-    for (const auto list : {positives, std::span<const std::size_t>(zeros)})
+    for (const auto list : {std::span<const std::size_t>(pos), std::span<const std::size_t>(zeros)})
         for (const std::size_t row : list) x.copy_row(row, std::span(rows).subspan(dim * i++, dim));
 
     // L-BFGS over theta = [w..., b]. theta and its gradient are floats, the model's own precision, so every
@@ -116,12 +129,9 @@ TasteModel train_taste(const EmbeddingMatrix& x, const std::span<const std::size
     std::deque<Curvature> history;  // oldest first
     std::vector<double> d(dim + 1), alpha(history_size);
 
-    double f = objective(theta, grad);
-    std::vector<float> loss{static_cast<float>(f)};
-    for (int iteration = 0; iteration < config.max_iterations; ++iteration) {
-        if (max_abs(grad) < config.tolerance * std::max(1.0, std::abs(f))) break;
-
-        // Two-loop recursion: d = -H grad, with H0 = (s.y / y.y) I from the newest pair, or 1 / |grad| at first.
+    // Two-loop recursion: d = -H grad, with H0 = (s.y / y.y) I from the newest pair, or 1 / |grad| without history
+    // (a unit steepest-descent step). Returns the slope grad.d.
+    const auto direction = [&] {
         std::ranges::copy(grad, d.begin());
         for (std::size_t k = history.size(); k-- > 0;) {
             alpha[k] = history[k].rho * dot(history[k].s, d);
@@ -135,8 +145,35 @@ TasteModel train_taste(const EmbeddingMatrix& x, const std::span<const std::size
             axpy(alpha[k] - beta, history[k].s, d);
         }
         for (double& v : d) v = -v;
-        const double slope = std::inner_product(grad.begin(), grad.end(), d.begin(), 0.0);
-        if (!(slope < 0.0)) break;  // H is positive definite, so only rounding or a NaN gets here
+        return std::inner_product(grad.begin(), grad.end(), d.begin(), 0.0);
+    };
+
+    double f = objective(theta, grad);
+    std::vector<float> loss;
+    const auto record = [&] {
+        loss.push_back(static_cast<float>(f));
+        if (config.on_iteration) config.on_iteration(static_cast<int>(loss.size() - 1), loss.back());
+    };
+    record();
+    TasteStop stop{};
+    for (int iteration = 0;; ++iteration) {
+        if (max_abs(grad) < config.tolerance * std::max(1.0, std::abs(f))) {
+            stop = TasteStop::Converged;
+            break;
+        }
+        if (iteration == config.max_iterations) {
+            stop = TasteStop::MaxIterations;
+            break;
+        }
+        double slope = direction();
+        if (!(slope < 0.0)) {  // H is positive definite, so only rounding or a NaN gets here: retry along -grad once
+            history.clear();
+            slope = direction();
+        }
+        if (!(slope < 0.0)) {  // not even steepest descent descends: the gradient is zero (or not finite)
+            stop = TasteStop::NoDescent;
+            break;
+        }
 
         // Backtracking line search: halve the step until the loss falls by at least c1 * step * slope. Strict <,
         // because once c1 * step * slope is below f's rounding, <= would accept a step that does not move theta.
@@ -147,7 +184,10 @@ TasteModel train_taste(const EmbeddingMatrix& x, const std::span<const std::size
             f_trial = objective(trial, trial_grad);
             if (f_trial < f + c1 * step * slope) break;  // a NaN loss never passes
         }
-        if (halvings > max_halvings) break;  // no step lowers the loss: theta is the best point found
+        if (halvings > max_halvings) {  // no step lowers the loss: theta is the best point found
+            stop = TasteStop::LineSearchFailed;
+            break;
+        }
 
         // Keep the pair only when s.y is clearly positive (curvature guard), so H stays positive definite.
         Curvature pair{std::vector<double>(dim + 1), std::vector<double>(dim + 1), 0.0};
@@ -164,10 +204,14 @@ TasteModel train_taste(const EmbeddingMatrix& x, const std::span<const std::size
         theta.swap(trial);
         grad.swap(trial_grad);
         f = f_trial;
-        loss.push_back(static_cast<float>(f));
+        record();
     }
 
-    if (report != nullptr) report->loss = std::move(loss);
+    if (report != nullptr) {
+        report->loss = std::move(loss);
+        report->stop = stop;
+        report->trained = true;
+    }
     model.weights.assign(theta.begin(), theta.begin() + static_cast<std::ptrdiff_t>(dim));
     model.bias = theta[dim];
     return model;

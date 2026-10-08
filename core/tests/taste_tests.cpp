@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <fstream>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -107,4 +108,64 @@ void run_taste_tests() {
     pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, row0, {}, row0); }), "a positive that is also unlabeled throws");
     pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, past_end, neg, {}); }), "a row past the matrix throws");
     pms_check(throws_invalid_argument([&] { (void)pms::taste_objective(x, dim + 1, y, w, b, 1.0F, g, gb); }), "taste_objective checks its sizes");
+
+    // 8. A row repeated within one list counts once: the model is bit-identical to the deduplicated lists.
+    std::vector<std::size_t> pos_twice(pos), unl_twice(unl);
+    pos_twice.insert(pos_twice.end(), pos.begin(), pos.end());
+    unl_twice.insert(unl_twice.end(), unl.begin(), unl.end());
+    pms::TasteReport twice;
+    const auto dedup = pms::train_taste(m, pos_twice, neg, {}, {}, &twice);
+    pms_check(dedup.weights == model.weights && dedup.bias == model.bias, "duplicates within a list do not change the model");
+    pms_check(twice.positives == pos.size() && twice.loss == report.loss, "duplicates within a list count once");
+    const auto dedup_seeded = pms::train_taste(m, pos, {}, unl_twice, pms::TasteConfig{.unlabeled_cap = 50, .seed = 7});
+    pms_check(dedup_seeded.weights == first.weights && dedup_seeded.bias == first.bias, "repeated unlabeled rows sample like the distinct ones");
+    pms::TasteReport all_unl;
+    (void)pms::train_taste(m, pos, {}, unl_twice, {}, &all_unl);
+    pms_check(all_unl.unlabeled_used == unl.size(), "repeated unlabeled rows are used once");
+    const std::vector<std::size_t> row0_twice{0, 0};
+    pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, row0_twice, row0, {}); }), "a repeated row that is also in another list throws");
+
+    // 9. Config validation.
+    const float nan = std::numeric_limits<float>::quiet_NaN(), inf = std::numeric_limits<float>::infinity();
+    for (const float bad : {-1.0F, nan, inf}) {
+        pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.l2 = bad}); }), "l2 must be finite and >= 0");
+        pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.tolerance = bad}); }), "tolerance must be finite and >= 0");
+    }
+    for (const int bad : {0, -3})
+        pms_check(throws_invalid_argument([&] { (void)pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.max_iterations = bad}); }), "max_iterations must be > 0");
+    (void)pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.l2 = 0.0F, .max_iterations = 5});  // l2 0 is allowed
+
+    // 10. Why training stopped.
+    pms_check(report.trained && report.stop == pms::TasteStop::Converged, "the parity run converges");
+    pms::TasteReport one_step;
+    (void)pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.max_iterations = 1}, &one_step);
+    pms_check(one_step.trained && one_step.stop == pms::TasteStop::MaxIterations && one_step.loss.size() == 2, "the iteration cap is reported");
+    pms_check(exhaustive.trained && exhaustive.stop == pms::TasteStop::LineSearchFailed, "the float floor is reported as a failed line search");
+    pms_check(!untrained.trained && untrained.stop == pms::TasteStop::Untrainable, "no positives is untrainable");
+    pms::TasteReport no_zeros;
+    (void)pms::train_taste(m, pos, {}, {}, {}, &no_zeros);
+    pms_check(!no_zeros.trained && no_zeros.stop == pms::TasteStop::Untrainable && no_zeros.loss.empty(), "no rows labeled 0 is untrainable");
+    // Two identical rows, one kept and one deleted: the gradient at the start is exactly zero, the optimum.
+    pms::EmbeddingMatrix twin(2);
+    twin.append(std::vector<float>{1.0F, 0.0F});
+    twin.append(std::vector<float>{1.0F, 0.0F});
+    const std::vector<std::size_t> row1{1};
+    pms::TasteReport stationary;
+    (void)pms::train_taste(twin, row0, row1, {}, {}, &stationary);
+    pms_check(stationary.stop == pms::TasteStop::Converged && stationary.loss.size() == 1, "a zero gradient converges at once");
+    const auto flat = pms::train_taste(twin, row0, row1, {}, pms::TasteConfig{.tolerance = 0.0F}, &stationary);
+    pms_check(stationary.trained && stationary.stop == pms::TasteStop::NoDescent && stationary.loss.size() == 1, "with tolerance 0 a zero gradient has no descent direction");
+    pms_check(flat.weights == std::vector<float>(2, 0.0F) && flat.bias == 0.0F, "no descent keeps the start");
+
+    // 11. The live loss callback sees exactly the report's curve, starting at iteration 0.
+    std::vector<std::pair<int, float>> calls;
+    pms::TasteReport streamed;
+    const auto streamed_model = pms::train_taste(m, pos, neg, {}, pms::TasteConfig{.on_iteration = [&](int it, float loss) { calls.emplace_back(it, loss); }}, &streamed);
+    pms_check(calls.size() == streamed.loss.size() && streamed.loss == report.loss, "one call per loss value");
+    for (std::size_t k = 0; k < calls.size(); ++k)
+        pms_check(calls[k].first == static_cast<int>(k) && calls[k].second == streamed.loss[k], "calls carry the iteration and its loss");
+    pms_check(streamed_model.weights == model.weights, "the callback does not change the model");
+    calls.clear();
+    (void)pms::train_taste(m, {}, neg, {}, pms::TasteConfig{.on_iteration = [&](int it, float loss) { calls.emplace_back(it, loss); }});
+    pms_check(calls.empty(), "the zero model makes no calls");
 }
