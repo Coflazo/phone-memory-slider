@@ -1,11 +1,15 @@
 #include <chrono>
 #include <cstddef>
 #include <iostream>
+#include <numeric>
+#include <random>
 #include <vector>
 
+#include "pms/embeddings.hpp"
 #include "pms/fixture_catalog.hpp"
 #include "pms/preference_model.hpp"
 #include "pms/ranking.hpp"
+#include "pms/taste.hpp"
 
 int main() {
     constexpr std::size_t asset_count = 250'000;
@@ -37,8 +41,28 @@ int main() {
                                  ranked.capacity() * sizeof(pms::RankedAsset) +
                                  examples.capacity() * sizeof(pms::PreferenceExample);
 
+    // Taste head: 8,000 random unit rows of 768, 200 favorites, the rest unlabeled. Timed, not gated.
+    constexpr std::size_t taste_rows = 8'000, favorites = 200;
+    pms::EmbeddingMatrix embeddings(768);
+    std::mt19937 rng(20261007);
+    std::normal_distribution<float> normal;
+    std::vector<float> row(embeddings.dim());
+    for (std::size_t index = 0; index < taste_rows; ++index) {
+        for (float& value : row) value = normal(rng);
+        embeddings.append(row);
+    }
+    std::vector<std::size_t> positives(favorites), unlabeled(taste_rows - favorites);
+    std::iota(positives.begin(), positives.end(), std::size_t{0});
+    std::iota(unlabeled.begin(), unlabeled.end(), favorites);
+    pms::TasteReport report;
+    const auto taste_started = std::chrono::steady_clock::now();
+    (void)pms::train_taste(embeddings, positives, {}, unlabeled, {}, &report);
+    const auto taste_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - taste_started).count();
+
     std::cout << "{\"assets\":" << asset_count << ",\"model_and_rank_ms\":" << elapsed_ms
-              << ",\"estimated_bytes\":" << estimated_bytes << "}\n";
+              << ",\"estimated_bytes\":" << estimated_bytes << ",\"taste_train_ms\":" << taste_ms
+              << ",\"taste_iterations\":" << report.loss.size() - 1 << "}\n";
     return ranked.size() == asset_count && model.enabled() && elapsed < std::chrono::seconds{2} &&
                    estimated_bytes < 1'500'000'000
                ? 0

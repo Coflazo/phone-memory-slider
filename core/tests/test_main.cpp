@@ -13,6 +13,7 @@ void run_media_kind_tests();
 void run_quality_tests();
 void run_pdq_tests();
 void run_embeddings_tests();
+void run_taste_tests();
 
 int main() {
     try {
@@ -28,6 +29,7 @@ int main() {
         run_quality_tests();
         run_pdq_tests();
         run_embeddings_tests();
+        run_taste_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {

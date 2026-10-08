@@ -25,6 +25,7 @@ add_library(pms_core STATIC
   src/quality.cpp
   src/pdq.cpp
   src/embeddings.cpp
+  src/taste.cpp
 )
 
 target_include_directories(pms_core PUBLIC include)
