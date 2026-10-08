@@ -15,6 +15,14 @@ void run_link_qr_tests();
 void run_link_session_tests();
 void write_link_golden_messages(const std::filesystem::path& dir);
 void write_link_golden_ik_transcript(const std::filesystem::path& dir);
+void run_media_format_tests();
+void run_media_meta_tests();
+void run_media_kind_tests();
+void run_quality_tests();
+void run_pdq_tests();
+void run_embeddings_tests();
+void run_taste_tests();
+void run_delete_model_tests();
 
 int main(int argc, char** argv) {
     try {
@@ -39,6 +47,14 @@ int main(int argc, char** argv) {
         run_link_messages_tests();
         run_link_qr_tests();
         run_link_session_tests();
+        run_media_format_tests();
+        run_media_meta_tests();
+        run_media_kind_tests();
+        run_quality_tests();
+        run_pdq_tests();
+        run_embeddings_tests();
+        run_taste_tests();
+        run_delete_model_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {
