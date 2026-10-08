@@ -32,14 +32,17 @@ private slots:
 
     void rereadsWhenTheAppBecomesActive() {
         pms::desktop::Platform platform;
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS)
+        QTest::qWait(1500);  // Linux reads asynchronously (gsettings waits up to 1 s); settle the first answer
+#endif
         if (platform.reducedMotion()) {
             QSKIP("The OS already asks for reduced motion");
         }
         QSignalSpy changed{&platform, &pms::desktop::Platform::reducedMotionChanged};
         qputenv("PMS_REDUCED_MOTION", "1");
         emit qGuiApp->applicationStateChanged(Qt::ApplicationActive);
+        QTRY_VERIFY(platform.reducedMotion());
         QCOMPARE(changed.count(), 1);
-        QVERIFY(platform.reducedMotion());
     }
 };
 

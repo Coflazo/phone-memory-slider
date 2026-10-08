@@ -44,7 +44,8 @@ else()
   target_link_libraries(pms_desktop PUBLIC OpenSSL::Crypto)
 endif()
 if(APPLE)
-  target_link_libraries(pms_desktop PUBLIC "-framework CoreFoundation" "-framework Security")
+  target_sources(pms_desktop PRIVATE src/platform/reduced_motion_mac.mm)
+  target_link_libraries(pms_desktop PUBLIC "-framework AppKit" "-framework CoreFoundation" "-framework Security")
 endif()
 
 qt_add_executable(phone_memory_slider

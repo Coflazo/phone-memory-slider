@@ -14,15 +14,27 @@ foreach ($property in $tokens.color.PSObject.Properties) {
 }
 
 # Theme.qml is generated: regenerate it in memory and compare it with the committed file.
-$python = Get-Command python, python3 -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+# The first python/python3 on PATH that really runs Python 3. The Microsoft Store alias in WindowsApps only opens
+# the Store, so it is skipped.
+$python = $null
+foreach ($candidate in @(Get-Command python, python3 -All -CommandType Application -ErrorAction SilentlyContinue)) {
+    if ($candidate.Source -match '[\\/]WindowsApps[\\/]') {
+        continue
+    }
+    $major = & $candidate.Source -c 'import sys; print(sys.version_info[0])'
+    if ($LASTEXITCODE -eq 0 -and "$major".Trim() -eq '3') {
+        $python = $candidate.Source
+        break
+    }
+}
 if (-not $python) {
     throw 'Python 3 is required to compare desktop/qml/Theme.qml with design/tokens.json'
 }
-& $python.Source (Join-Path $root 'tools/tokens_to_qml.py') --check
+& $python (Join-Path $root 'tools/tokens_to_qml.py') --check
 if ($LASTEXITCODE -ne 0) {
     throw 'desktop/qml/Theme.qml does not match design/tokens.json; run python tools/tokens_to_qml.py'
 }
-& $python.Source -m unittest discover -s (Join-Path $root 'tools/tests')
+& $python -m unittest discover -s (Join-Path $root 'tools/tests')
 if ($LASTEXITCODE -ne 0) {
     throw 'tools/tests failed'
 }

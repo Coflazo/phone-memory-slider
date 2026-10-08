@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.24)
 
 project(PhoneMemorySlider VERSION 1.0.0 LANGUAGES CXX)
 
+if(APPLE)
+  enable_language(OBJCXX)  # desktop/src/platform/reduced_motion_mac.mm only
+endif()
+
 set(CPACK_PACKAGE_NAME "PhoneMemorySlider")
 set(CPACK_PACKAGE_VENDOR "Phone Memory Slider contributors")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Local-only phone gallery review")

@@ -1,5 +1,7 @@
 """Checks for tools/tokens_to_qml.py. Run: python -m unittest discover -s tools/tests"""
 
+import copy
+import json
 import shutil
 import subprocess
 import sys
@@ -10,6 +12,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "tools" / "tokens_to_qml.py"
 THEME = ROOT / "desktop" / "qml" / "Theme.qml"
+TOKENS = json.loads((ROOT / "design" / "tokens.json").read_text(encoding="utf-8"))
+sys.path.insert(0, str(SCRIPT.parent))
+import tokens_to_qml  # noqa: E402
+
+
+def luminance(hex_color: str) -> float:
+    channels = [int(hex_color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def contrast(a: str, b: str) -> float:
+    high, low = sorted((luminance(a), luminance(b)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
 
 
 def run(*args: str) -> subprocess.CompletedProcess:
@@ -58,6 +74,25 @@ class TokensToQml(unittest.TestCase):
             'property string fontMono: "Geist Mono"',
         ):
             self.assertIn(expected, text)
+
+    def test_rejects_colours_that_are_not_rrggbb(self):
+        for bad in ("#FFF", "FF5A36", "#GG5A36", "#FF5A36AA", 16733750):
+            tokens = copy.deepcopy(TOKENS)
+            tokens["color"]["brand"]["light"] = bad
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                tokens_to_qml.render(tokens)
+
+    # DESIGN.md: text and status colours meet WCAG AA (4.5:1) on canvas, surface and raised in their theme.
+    # brand is exempt: it is only the wordmark and the focus ring, a non-text component, so it needs 3:1 (WCAG 1.4.11).
+    def test_text_and_status_colours_meet_aa(self):
+        colors = TOKENS["color"]
+        for mode in ("dark", "light"):
+            for background in ("canvas", "surface", "raised"):
+                for foreground in ("textPrimary", "textSecondary", "keep", "delete", "warning", "info"):
+                    ratio = contrast(colors[foreground][mode], colors[background][mode])
+                    self.assertGreaterEqual(ratio, 4.5, f"{foreground} on {background} ({mode}) is {ratio:.2f}:1")
+                ratio = contrast(colors["brand"][mode], colors[background][mode])
+                self.assertGreaterEqual(ratio, 3.0, f"brand on {background} ({mode}) is {ratio:.2f}:1")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ The output depends only on tokens.json (key order included), so two runs give id
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -18,6 +19,8 @@ THEME = ROOT / "desktop" / "qml" / "Theme.qml"
 
 # `delete` is a JavaScript keyword, so it cannot be a QML property name.
 QML_NAMES = {"delete": "remove"}
+
+HEX_COLOR = re.compile(r"#[0-9A-Fa-f]{6}")
 
 # v1 screens still use these names; Plan C Task 11 deletes those screens and this table.
 DEPRECATED = [
@@ -61,6 +64,9 @@ def render(tokens: dict) -> str:
         "",
     ]
     for name, modes in tokens["color"].items():
+        for mode in ("dark", "light"):
+            if not isinstance(modes.get(mode), str) or not HEX_COLOR.fullmatch(modes[mode]):
+                raise ValueError(f"color.{name}.{mode} must be #RRGGBB, got {modes.get(mode)!r}")
         lines.append(
             f'    readonly property color {QML_NAMES.get(name, name)}: dark ? "{modes["dark"]}" : "{modes["light"]}"'
         )
@@ -86,7 +92,11 @@ def main() -> int:
     parser.add_argument("--theme", type=Path, default=THEME, help="Theme.qml path (default: the committed one)")
     args = parser.parse_args()
 
-    expected = render(json.loads(TOKENS.read_text(encoding="utf-8")))
+    try:
+        expected = render(json.loads(TOKENS.read_text(encoding="utf-8")))
+    except (ValueError, KeyError) as problem:
+        print(f"design/tokens.json: {problem}", file=sys.stderr)
+        return 2
     if args.check:
         actual = args.theme.read_bytes().decode("utf-8").replace("\r\n", "\n")
         if actual != expected:
