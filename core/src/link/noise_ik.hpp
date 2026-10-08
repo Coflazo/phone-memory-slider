@@ -16,7 +16,9 @@
 struct NoiseHandshakeState_s;
 struct NoiseCipherState_s;
 
-namespace pms::link::detail {
+namespace pms::link {
+PMS_LINK_ABI_BEGIN
+namespace detail {
 
 enum class Role : std::uint8_t { Initiator, Responder };
 
@@ -71,4 +73,6 @@ void secure_zero(void* data, std::size_t size) noexcept;
 [[nodiscard]] std::string sas_digits(std::span<const std::uint8_t, 32> handshake_hash);
 [[nodiscard]] bool equal_constant_time(std::span<const std::uint8_t> a, std::span<const std::uint8_t> b) noexcept;
 
-}  // namespace pms::link::detail
+}  // namespace detail
+PMS_LINK_ABI_END
+}  // namespace pms::link

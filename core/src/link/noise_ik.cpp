@@ -7,6 +7,7 @@
 #include <noise/protocol.h>
 
 namespace pms::link {
+PMS_LINK_ABI_BEGIN
 namespace {
 
 constexpr const char* protocol_name = "Noise_IK_25519_ChaChaPoly_SHA256";
@@ -247,4 +248,5 @@ void NoiseIk::close() noexcept {
 }
 
 }  // namespace detail
+PMS_LINK_ABI_END
 }  // namespace pms::link

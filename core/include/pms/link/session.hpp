@@ -11,7 +11,19 @@
 #include <string_view>
 #include <vector>
 
+// The test build of this library (pms_link_testing, PMS_LINK_TEST_HOOKS) puts every symbol in the inline namespace
+// pms::link::testing_hooks. Source code is unchanged, but its mangled names differ from the app build's (pms_link), so a
+// binary that ends up with both copies keeps both instead of the linker silently using one for the other.
+#ifdef PMS_LINK_TEST_HOOKS
+#define PMS_LINK_ABI_BEGIN inline namespace testing_hooks {
+#define PMS_LINK_ABI_END }
+#else
+#define PMS_LINK_ABI_BEGIN
+#define PMS_LINK_ABI_END
+#endif
+
 namespace pms::link {
+PMS_LINK_ABI_BEGIN
 
 // Noise_IK_25519_ChaChaPoly_SHA256 between the phone (initiator) and the desktop (responder), with the prologue
 // "PMS/1" + service UUID. Message 1's payload, the pairing token, pinning and the 6-digit code are in
@@ -44,6 +56,7 @@ public:
     PairingWindow(const PairingWindow&) = delete;
     PairingWindow& operator=(const PairingWindow&) = delete;
 
+    // Also true while a session is committing a pairing with it; back to false if that session's pin store throws.
     [[nodiscard]] bool burned() const noexcept;
     void burn() noexcept;  // close it early, for example when the QR code is hidden
 
@@ -133,4 +146,5 @@ private:
 void set_fixed_ephemeral_for_tests(std::optional<KeyPair> responder, std::optional<KeyPair> initiator);
 #endif
 
+PMS_LINK_ABI_END
 }  // namespace pms::link

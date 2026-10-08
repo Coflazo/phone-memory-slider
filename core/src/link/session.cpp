@@ -10,6 +10,7 @@
 #include "pms/link/messages.hpp"
 
 namespace pms::link {
+PMS_LINK_ABI_BEGIN
 namespace {
 
 constexpr std::uint8_t kind_first_pairing = 1;
@@ -29,35 +30,34 @@ struct Message1 {
 };
 
 // u8 kind | 16-byte token (kind 1 only) | u16 BE length | UTF-8 model of at most max_string bytes, nothing after.
-// The token is copied out only once everything else is valid.
-std::optional<Message1> parse_message1(const std::span<const std::byte> payload) {
+// Fills the caller's m, so the token is never copied; it is written only once everything else is valid.
+[[nodiscard]] bool parse_message1(const std::span<const std::byte> payload, Message1& m) {
     if (payload.empty()) {
-        return std::nullopt;
+        return false;
     }
-    Message1 m;
     m.kind = static_cast<std::uint8_t>(payload[0]);
     if (m.kind != kind_first_pairing && m.kind != kind_reconnect) {
-        return std::nullopt;
+        return false;
     }
     const std::size_t header = 1 + (m.kind == kind_first_pairing ? m.token.size() : 0);
     if (payload.size() < header + 2) {
-        return std::nullopt;
+        return false;
     }
     const std::size_t length = (static_cast<std::size_t>(payload[header]) << 8U) | static_cast<std::size_t>(payload[header + 1]);
     const auto model = payload.subspan(header + 2);
     if (length > max_string || model.size() != length) {
-        return std::nullopt;
+        return false;
     }
     m.model.assign(reinterpret_cast<const char*>(model.data()), model.size());
     if (!valid_utf8(m.model)) {
-        return std::nullopt;
+        return false;
     }
     if (m.kind == kind_first_pairing) {
         for (std::size_t i = 0; i < m.token.size(); ++i) {
             m.token[i] = static_cast<std::uint8_t>(payload[1 + i]);
         }
     }
-    return m;
+    return true;
 }
 
 std::vector<std::byte> message1_payload(const std::uint8_t kind, const std::array<std::uint8_t, 16>* token,
@@ -138,23 +138,25 @@ HandshakeResult ResponderSession::on_message1(const std::span<const std::byte> m
     const auto uuid_prologue = prologue(service_uuid_);
     noise_ = std::make_unique<detail::NoiseIk>(detail::Role::Responder, desktop_, uuid_prologue, nullptr);
     auto payload = noise_->read_message(msg1);  // fails unless msg1 was encrypted to our static key
-    auto m = payload ? parse_message1(*payload) : std::nullopt;
+    Message1 m;
+    const bool parsed = payload && parse_message1(*payload, m);
     if (payload) {
         detail::secure_zero(payload->data(), payload->size());  // it holds the token
     }
+    // Use the token at once and wipe it, so no copy outlives this point on any path. admits() changes nothing.
+    const bool admitted = parsed && m.kind == kind_first_pairing && window_ != nullptr && window_->admits(m.token, now_unix_s);
+    detail::secure_zero(m.token.data(), m.token.size());
     const auto phone_key = noise_->remote_static();
-    if (!m || !phone_key || detail::small_order_public_key(*phone_key)) {
+    if (!parsed || !phone_key || detail::small_order_public_key(*phone_key)) {
         return reject();
     }
 
     Pinned peer;
-    if (m->kind == kind_first_pairing) {
-        const bool admitted = window_ != nullptr && window_->admits(m->token, now_unix_s);
-        detail::secure_zero(m->token.data(), m->token.size());
+    if (m.kind == kind_first_pairing) {
         if (!admitted) {
             return reject();
         }
-        peer = Pinned{*phone_key, m->model, now_unix_s};
+        peer = Pinned{*phone_key, m.model, now_unix_s};
     } else {
         auto pinned = pins_.find(*phone_key);
         if (!pinned) {
@@ -167,7 +169,7 @@ HandshakeResult ResponderSession::on_message1(const std::span<const std::byte> m
     if (!msg2 || !noise_->established()) {
         return reject();
     }
-    if (m->kind == kind_first_pairing) {
+    if (m.kind == kind_first_pairing) {
         // Take the window before pinning, so of two phones racing with one code only the first is ever pinned.
         if (!window_->take()) {
             return reject();
@@ -307,4 +309,5 @@ std::optional<std::vector<std::byte>> InitiatorSession::open(const std::span<con
     return noise_->open(ct);  // a failure drops the keys, so the session stays closed
 }
 
+PMS_LINK_ABI_END
 }  // namespace pms::link

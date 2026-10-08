@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,15 @@
 #ifndef PMS_LINK_TEST_HOOKS
 #error "pms_core_tests must link pms_link_testing, the session library built with the fixed-ephemeral hook"
 #endif
+
+// R15: the hook build's symbols are in pms::link::testing_hooks, so they cannot collide with pms_link's. These name the
+// namespace explicitly and fail to compile if the declarations are anywhere else.
+static_assert(std::is_same_v<pms::link::ResponderSession, pms::link::testing_hooks::ResponderSession>);
+static_assert(std::is_same_v<pms::link::InitiatorSession, pms::link::testing_hooks::InitiatorSession>);
+static_assert(std::is_same_v<pms::link::PairingWindow, pms::link::testing_hooks::PairingWindow>);
+static_assert(std::is_same_v<pms::link::detail::NoiseIk, pms::link::testing_hooks::detail::NoiseIk>);
+static_assert(&pms::link::generate_keypair == &pms::link::testing_hooks::generate_keypair);
+static_assert(&pms::link::set_fixed_ephemeral_for_tests == &pms::link::testing_hooks::set_fixed_ephemeral_for_tests);
 
 namespace {
 struct MemoryPins : pms::link::PinStore {
