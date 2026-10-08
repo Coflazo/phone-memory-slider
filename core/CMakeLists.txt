@@ -27,6 +27,7 @@ add_library(pms_core STATIC
   src/embeddings.cpp
   src/taste.cpp
   src/delete_model.cpp
+  src/eta.cpp
 )
 
 target_include_directories(pms_core PUBLIC include)
