@@ -4,7 +4,6 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
-#include <QStyleHints>
 #include <QTimer>
 #include <qqml.h>
 
@@ -19,6 +18,7 @@
 
 #include "review_deck_model.hpp"
 #include "app_controller.hpp"
+#include "platform/reduced_motion.hpp"
 
 int main(int argc, char* argv[]) {
     QQuickStyle::setStyle(QStringLiteral("Basic"));
@@ -39,11 +39,12 @@ int main(int argc, char* argv[]) {
     pms::desktop::AppController app_controller{&review_deck};
     qmlRegisterUncreatableType<pms::desktop::AppController>(
         "PhoneMemorySlider", 1, 0, "AppController", QStringLiteral("Provided by the desktop runtime"));
+    pms::desktop::Platform platform;
+    qmlRegisterSingletonInstance("PhoneMemorySlider", 1, 0, "Platform", &platform);
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("reviewDeck"), &review_deck);
     engine.rootContext()->setContextProperty(QStringLiteral("appController"), &app_controller);
-    const auto reduce_motion = app.styleHints()->property("reduceMotion").toBool();
-    engine.rootContext()->setContextProperty(QStringLiteral("systemReducedMotion"), reduce_motion);
+    engine.rootContext()->setContextProperty(QStringLiteral("systemReducedMotion"), platform.reducedMotion());
     engine.loadFromModule(QStringLiteral("PhoneMemorySlider"), QStringLiteral("Main"));
     if (engine.rootObjects().isEmpty()) {
         return 1;

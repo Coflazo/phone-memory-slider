@@ -9,6 +9,8 @@ add_library(pms_desktop STATIC
   src/face_presence_detector.hpp
   src/phone_client.cpp
   src/phone_client.hpp
+  src/platform/reduced_motion.cpp
+  src/platform/reduced_motion.hpp
   src/recovery_vault.cpp
   src/recovery_vault.hpp
   src/review_deck_model.cpp
@@ -25,6 +27,7 @@ target_link_libraries(pms_desktop PUBLIC
   Qt6::Concurrent
   Qt6::Gui
   Qt6::Multimedia
+  Qt6::Qml
   Qt6::Sql
 )
 
@@ -33,6 +36,9 @@ if(WIN32)
 else()
   find_package(OpenSSL REQUIRED)
   target_link_libraries(pms_desktop PUBLIC OpenSSL::Crypto)
+endif()
+if(APPLE)
+  target_link_libraries(pms_desktop PUBLIC "-framework CoreFoundation")
 endif()
 
 qt_add_executable(phone_memory_slider

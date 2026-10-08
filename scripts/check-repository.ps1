@@ -3,7 +3,6 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $tokens = Get-Content (Join-Path $root 'design/tokens.json') -Raw | ConvertFrom-Json
 $design = Get-Content (Join-Path $root 'DESIGN.md') -Raw
-$qml = Get-Content (Join-Path $root 'desktop/qml/Theme.qml') -Raw
 
 foreach ($property in $tokens.color.PSObject.Properties) {
     foreach ($mode in @('dark', 'light')) {
@@ -11,22 +10,27 @@ foreach ($property in $tokens.color.PSObject.Properties) {
         if ($design -notmatch [regex]::Escape($hex)) {
             throw "DESIGN.md is missing $($property.Name).$mode ($hex)"
         }
-        if ($qml -notmatch [regex]::Escape($hex)) {
-            throw "Theme.qml is missing $($property.Name).$mode ($hex)"
-        }
     }
 }
 
-foreach ($property in $tokens.motionMs.PSObject.Properties) {
-    if ($qml -notmatch "\b$($property.Value)\b") {
-        throw "Theme.qml is missing motion token $($property.Name)"
-    }
+# Theme.qml is generated: regenerate it in memory and compare it with the committed file.
+$python = Get-Command python, python3 -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $python) {
+    throw 'Python 3 is required to compare desktop/qml/Theme.qml with design/tokens.json'
+}
+& $python.Source (Join-Path $root 'tools/tokens_to_qml.py') --check
+if ($LASTEXITCODE -ne 0) {
+    throw 'desktop/qml/Theme.qml does not match design/tokens.json; run python tools/tokens_to_qml.py'
+}
+& $python.Source -m unittest discover -s (Join-Path $root 'tools/tests')
+if ($LASTEXITCODE -ne 0) {
+    throw 'tools/tests failed'
 }
 
 $runtimeFiles = Get-ChildItem @((Join-Path $root 'core'), (Join-Path $root 'desktop')) -Recurse -File |
     Where-Object { $_.Extension -in @('.cpp', '.hpp', '.qml') -and $_.FullName -notmatch '[\\/]tests[\\/]' }
 
-$forbiddenRuntime = $runtimeFiles | Select-String -Pattern @(
+$egressPatterns = @(
     'Qt6::Network',
     '#include\s*[<"]QNetwork',
     '\bQNetwork[A-Za-z]+',
@@ -37,6 +41,12 @@ $forbiddenRuntime = $runtimeFiles | Select-String -Pattern @(
     '\bcurl_easy_',
     'https?://'
 )
+# The JPEG XMP segment is tagged with this namespace name; it is matched as bytes, never fetched.
+$xmpMarker = [regex]::Escape('http://ns.adobe.com/xap/1.0/')
+$forbiddenRuntime = $runtimeFiles | Select-String -Pattern $egressPatterns | Where-Object {
+    $line = $_.Line -replace $xmpMarker, ''
+    $egressPatterns | Where-Object { $line -match $_ }
+}
 if ($forbiddenRuntime) {
     $first = $forbiddenRuntime | Select-Object -First 1
     throw "Runtime egress primitive found: $($first.Path):$($first.LineNumber)"
