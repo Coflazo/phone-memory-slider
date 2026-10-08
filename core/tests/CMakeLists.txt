@@ -1,6 +1,7 @@
 add_executable(pms_core_tests
   test_main.cpp
   delete_model_tests.cpp
+  duplicates_tests.cpp
   embeddings_tests.cpp
   eta_tests.cpp
   fixture_catalog_tests.cpp

@@ -16,6 +16,7 @@ void run_embeddings_tests();
 void run_taste_tests();
 void run_delete_model_tests();
 void run_eta_tests();
+void run_duplicates_tests();
 
 int main() {
     try {
@@ -34,6 +35,7 @@ int main() {
         run_taste_tests();
         run_delete_model_tests();
         run_eta_tests();
+        run_duplicates_tests();
         std::cout << "All core tests passed\n";
         return 0;
     } catch (const std::exception& error) {
