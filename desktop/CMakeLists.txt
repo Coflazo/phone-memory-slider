@@ -11,6 +11,8 @@ add_library(pms_desktop STATIC
   src/library/library.hpp
   src/phone_client.cpp
   src/phone_client.hpp
+  src/platform/durable.cpp
+  src/platform/durable.hpp
   src/platform/key_store.cpp
   src/platform/key_store.hpp
   src/platform/reduced_motion.cpp

@@ -14,14 +14,7 @@
 #include <stdexcept>
 #include <vector>
 
-#ifdef Q_OS_WIN
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
+#include "platform/durable.hpp"
 
 namespace pms::desktop {
 namespace {
@@ -52,8 +45,10 @@ constexpr const char* schema[] = {
     "error TEXT NOT NULL DEFAULT '', removed INTEGER NOT NULL DEFAULT 0, UNIQUE(source_key, source_id))",
     // Append-only: undo flags the row instead of deleting it.
     "CREATE TABLE IF NOT EXISTS decisions("
+    // sha256, bytes and modified_s are the item's as it was reviewed; a decision only applies while they match.
     "seq INTEGER PRIMARY KEY, item_id INTEGER NOT NULL REFERENCES items(id), decision INTEGER NOT NULL, "
-    "at_ms INTEGER NOT NULL, undone INTEGER NOT NULL DEFAULT 0)",
+    "at_ms INTEGER NOT NULL, undone INTEGER NOT NULL DEFAULT 0, sha256 BLOB NOT NULL DEFAULT x'', "
+    "bytes INTEGER NOT NULL DEFAULT 0, modified_s INTEGER NOT NULL DEFAULT 0)",
     "PRAGMA user_version = 2",
 };
 
@@ -106,16 +101,20 @@ std::optional<Decision> to_decision(const int value) {
     return static_cast<Decision>(value);
 }
 
-void sync_to_disk(QFile& file) {
-#ifdef Q_OS_WIN
-    const auto ok = FlushFileBuffers(reinterpret_cast<HANDLE>(_get_osfhandle(file.handle()))) != FALSE;
-#else
-    const auto ok = ::fsync(file.handle()) == 0;
-#endif
-    if (!ok) {
-        qCWarning(library_log) << "embeddings.f16 could not be flushed to disk";
-    }
+// fp16 exponent all ones: inf or NaN.
+bool has_non_finite(const std::uint16_t* row, const std::size_t dim) {
+    return std::any_of(row, row + dim, [](const std::uint16_t half) { return (half & 0x7C00U) == 0x7C00U; });
 }
+
+// A unit vector is never all zeros; zeros are a row the OS had not written before a crash.
+bool all_zero(const std::uint16_t* row, const std::size_t dim) {
+    return std::all_of(row, row + dim, [](const std::uint16_t half) { return (half & 0x7FFFU) == 0; });
+}
+
+// The decision's fingerprint still matches the item (same rule as content_changed, inverted).
+constexpr auto decision_fresh =
+    "(d.bytes = i.bytes AND d.modified_s = i.modified_s AND "
+    "(length(d.sha256) = 0 OR length(i.sha256) = 0 OR d.sha256 = i.sha256))";
 
 }  // namespace
 
@@ -143,6 +142,7 @@ bool Library::open(QString* error) {
         }
         embeddings_.close();
         database_.close();
+        lock_.reset();
         return false;
     };
     if (directory_.isEmpty() || !QDir{}.mkpath(directory_)) {
@@ -153,6 +153,12 @@ bool Library::open(QString* error) {
         return fail(QStringLiteral("The library folder could not be restricted to the current user"));
     }
 #endif
+    lock_ = std::make_unique<QLockFile>(QDir{directory_}.filePath(QStringLiteral("library.lock")));
+    lock_->setStaleLockTime(0);  // held for the object's lifetime; only a dead owner makes it stale
+    if (!lock_->tryLock(0)) {
+        lock_.reset();
+        return fail(QStringLiteral("The library is open in another window of Phone Memory Slider"));
+    }
     const QDir directory{directory_};
     // v1 never shipped a release, so its catalog is not migrated; it is kept aside, not deleted.
     const auto v1 = directory.filePath(QStringLiteral("catalog.sqlite"));
@@ -189,6 +195,12 @@ bool Library::open(QString* error) {
             return fail(query.lastError().text());
         }
     }
+    QSqlQuery last{database_};
+    if (!last.exec(QStringLiteral("SELECT COALESCE(MAX(seq), 0) FROM decisions")) || !last.next()) {
+        return fail(last.lastError().text());
+    }
+    session_seq_ = last.value(0).toLongLong();
+    last.finish();
     QString message;
     if (!openEmbeddings(message)) {
         return fail(message);
@@ -232,6 +244,26 @@ bool Library::openEmbeddings(QString& error) {
             return false;
         }
     }
+    // The last rows may postdate the latest fsync, and a crash can leave them as zeros. Check up to sync_every of
+    // them and re-queue the items of any row that is all zeros or not finite.
+    if (rows_ > 0) {
+        const auto checked = std::min<qint64>(rows_, sync_every);
+        const auto row_bytes = static_cast<qint64>(dim_ * sizeof(std::uint16_t));
+        std::vector<std::uint16_t> tail(static_cast<std::size_t>(checked) * dim_);
+        if (!embeddings_.seek(header_bytes + (rows_ - checked) * row_bytes) ||
+            embeddings_.read(reinterpret_cast<char*>(tail.data()), checked * row_bytes) != checked * row_bytes) {
+            error = QStringLiteral("embeddings.f16 could not be read back");
+            return false;
+        }
+        QList<qint64> bad;
+        for (qint64 index = 0; index < checked; ++index) {
+            const auto* row = tail.data() + static_cast<std::size_t>(index) * dim_;
+            if (all_zero(row, dim_) || has_non_finite(row, dim_)) {
+                bad.push_back(rows_ - checked + index);
+            }
+        }
+        requeueRows(bad);
+    }
     // Rows past the end were lost in a crash; those items are embedded again.
     QSqlQuery reset{database_};
     reset.prepare(QStringLiteral("UPDATE items SET embedding_row = -1 WHERE embedding_row >= :rows"));
@@ -245,8 +277,21 @@ bool Library::openEmbeddings(QString& error) {
 
 void Library::syncEmbeddings() {
     if (embeddings_.isOpen() && unsynced_ > 0) {
-        sync_to_disk(embeddings_);
+        if (!sync_file(embeddings_)) {
+            qCWarning(library_log) << "embeddings.f16 could not be flushed to disk";
+        }
         unsynced_ = 0;
+    }
+}
+
+void Library::requeueRows(const QList<qint64>& rows) const {
+    for (const auto row : rows) {
+        QSqlQuery requeue{database_};
+        requeue.prepare(QStringLiteral("UPDATE items SET embedding_row = -1 WHERE embedding_row = :row"));
+        requeue.bindValue(QStringLiteral(":row"), row);
+        if (run(requeue, "re-queue damaged embedding row")) {
+            qCWarning(library_log) << "embedding row" << row << "is damaged; its item will be embedded again";
+        }
     }
 }
 
@@ -414,6 +459,15 @@ pms::EmbeddingMatrix Library::loadEmbeddings() const {
         qCWarning(library_log) << "embeddings.f16 could not be read:" << file.errorString();
         return pms::EmbeddingMatrix{dim_};
     }
+    QList<qint64> bad;
+    for (std::size_t row = 0; row < static_cast<std::size_t>(rows_); ++row) {
+        auto* values = halves.data() + row * dim_;
+        if (has_non_finite(values, dim_)) {
+            std::fill(values, values + dim_, std::uint16_t{0});
+            bad.push_back(static_cast<qint64>(row));
+        }
+    }
+    requeueRows(bad);
     try {
         return pms::EmbeddingMatrix::from_raw(dim_, std::move(halves));
     } catch (const std::invalid_argument& failure) {
@@ -432,18 +486,23 @@ void Library::setError(const qint64 id, const QString& reason) {
 
 void Library::setDecision(const qint64 id, const Decision d, const qint64 at_ms) {
     QSqlQuery query{database_};
-    query.prepare(QStringLiteral("INSERT INTO decisions(item_id, decision, at_ms) VALUES(:id, :decision, :at)"));
+    query.prepare(QStringLiteral(
+        "INSERT INTO decisions(item_id, decision, at_ms, sha256, bytes, modified_s) "
+        "SELECT id, :decision, :at, sha256, bytes, modified_s FROM items WHERE id = :id"));
     query.bindValue(QStringLiteral(":id"), id);
     query.bindValue(QStringLiteral(":decision"), static_cast<int>(d));
     query.bindValue(QStringLiteral(":at"), at_ms);
-    run(query, "decision");
+    if (run(query, "decision") && query.numRowsAffected() != 1) {
+        qCWarning(library_log) << "decision for unknown item" << id;
+    }
 }
 
 std::optional<std::pair<qint64, Decision>> Library::undoLast() {
     QSqlQuery query{database_};
     query.prepare(QStringLiteral(
-        "UPDATE decisions SET undone = 1 WHERE seq = (SELECT MAX(seq) FROM decisions WHERE undone = 0) "
-        "RETURNING item_id, decision"));
+        "UPDATE decisions SET undone = 1 WHERE seq = (SELECT MAX(d.seq) FROM decisions d JOIN items i ON i.id = d.item_id "
+        "WHERE d.undone = 0 AND d.seq > :session AND i.removed = 0) RETURNING item_id, decision"));
+    query.bindValue(QStringLiteral(":session"), session_seq_);
     if (!run(query, "undo") || !query.next()) {
         return std::nullopt;
     }
@@ -501,22 +560,46 @@ QList<ItemRow> Library::items(const QString& source_key) const {
     return items;
 }
 
-QHash<qint64, Decision> Library::decisions() const {
+QHash<qint64, std::pair<Decision, bool>> Library::latestDecisions() const {
     QSqlQuery query{database_};
     query.setForwardOnly(true);
     query.prepare(QStringLiteral(
-        "SELECT item_id, decision FROM decisions WHERE seq IN "
-        "(SELECT MAX(seq) FROM decisions WHERE undone = 0 GROUP BY item_id)"));
-    QHash<qint64, Decision> decisions;
+                      "SELECT d.item_id, d.decision, %1 FROM decisions d JOIN items i ON i.id = d.item_id "
+                      "WHERE d.seq IN (SELECT MAX(seq) FROM decisions WHERE undone = 0 GROUP BY item_id)")
+                      .arg(QString::fromLatin1(decision_fresh)));
+    QHash<qint64, std::pair<Decision, bool>> latest;
     if (!run(query, "decisions")) {
-        return decisions;
+        return latest;
     }
     while (query.next()) {
         if (const auto decision = to_decision(query.value(1).toInt())) {
-            decisions.insert(query.value(0).toLongLong(), *decision);
+            latest.insert(query.value(0).toLongLong(), {*decision, query.value(2).toBool()});
+        }
+    }
+    return latest;
+}
+
+QHash<qint64, Decision> Library::decisions() const {
+    QHash<qint64, Decision> decisions;
+    const auto latest = latestDecisions();
+    for (auto it = latest.cbegin(); it != latest.cend(); ++it) {
+        if (it->second) {
+            decisions.insert(it.key(), it->first);
         }
     }
     return decisions;
+}
+
+QList<qint64> Library::staleDecisions() const {
+    QList<qint64> stale;
+    const auto latest = latestDecisions();
+    for (auto it = latest.cbegin(); it != latest.cend(); ++it) {
+        if (!it->second) {
+            stale.push_back(it.key());
+        }
+    }
+    std::sort(stale.begin(), stale.end());
+    return stale;
 }
 
 void Library::setSourceCursor(const QString& source_key, const QString& store_version, const quint64 generation) {
