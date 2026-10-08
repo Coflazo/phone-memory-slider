@@ -20,7 +20,7 @@ private slots:
 
         pms::desktop::RecoveryVault vault{directory.filePath(QStringLiteral("vault"))};
         QVERIFY2(vault.open(), qPrintable(vault.errorString()));
-        pms::desktop::VaultEntry entry;
+        pms::desktop::RecoveryVaultEntry entry;
         QVERIFY2(vault.archive(source, QStringLiteral("asset-7"), QStringLiteral("IMG_0007.JPG"), entry),
                  qPrintable(vault.errorString()));
         QVERIFY(QFileInfo::exists(entry.encryptedPath));
@@ -47,7 +47,7 @@ private slots:
 
         pms::desktop::RecoveryVault vault{directory.filePath(QStringLiteral("vault"))};
         QVERIFY(vault.open());
-        pms::desktop::VaultEntry entry;
+        pms::desktop::RecoveryVaultEntry entry;
         QVERIFY(vault.archive(source, QStringLiteral("asset-8"), QStringLiteral("IMG_0008.JPG"), entry));
         QFile encrypted{entry.encryptedPath};
         QVERIFY(encrypted.open(QIODevice::ReadWrite));
@@ -68,9 +68,9 @@ private slots:
         pms::desktop::RecoveryVault vault{directory.filePath(QStringLiteral("vault"))};
         QVERIFY(vault.open());
 
-        pms::desktop::VaultEntry first;
-        pms::desktop::VaultEntry second;
-        for (const auto& item : std::initializer_list<std::pair<QByteArray, pms::desktop::VaultEntry*>>{
+        pms::desktop::RecoveryVaultEntry first;
+        pms::desktop::RecoveryVaultEntry second;
+        for (const auto& item : std::initializer_list<std::pair<QByteArray, pms::desktop::RecoveryVaultEntry*>>{
                  {QByteArray{"first-version"}, &first},
                  {QByteArray{"second-version"}, &second}}) {
             QFile file{source};

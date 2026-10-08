@@ -725,7 +725,7 @@ void AppController::confirmDelete() {
                 result.error = QStringLiteral("%1 changed since review and was not removed").arg(asset.name);
                 return result;
             }
-            VaultEntry entry;
+            RecoveryVaultEntry entry;
             if (!vault.archive(plain, asset.id, asset.name, entry)) {
                 result.error = vault.errorString();
                 return result;

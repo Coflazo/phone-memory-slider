@@ -8,7 +8,7 @@ class QIODevice;
 
 namespace pms::desktop {
 
-struct VaultEntry {
+struct RecoveryVaultEntry {
     QString id;
     QString originalName;
     QString encryptedPath;
@@ -25,8 +25,8 @@ public:
         const QString& plain_path,
         const QString& asset_id,
         const QString& original_name,
-        VaultEntry& entry);
-    [[nodiscard]] bool restore(const VaultEntry& entry, const QString& destination);
+        RecoveryVaultEntry& entry);
+    [[nodiscard]] bool restore(const RecoveryVaultEntry& entry, const QString& destination);
     [[nodiscard]] QString errorString() const;
     [[nodiscard]] QString rootPath() const;
 
@@ -38,7 +38,7 @@ private:
         QIODevice* destination,
         const QString& expected_digest);
     [[nodiscard]] bool decryptFile(const QString& source, const QString& destination, const QString& expected_digest);
-    [[nodiscard]] bool appendManifest(const VaultEntry& entry);
+    [[nodiscard]] bool appendManifest(const RecoveryVaultEntry& entry);
     void setError(QString message);
 
     QString root_;

@@ -11,12 +11,16 @@ add_library(pms_desktop STATIC
   src/library/library.hpp
   src/phone_client.cpp
   src/phone_client.hpp
+  src/platform/key_store.cpp
+  src/platform/key_store.hpp
   src/platform/reduced_motion.cpp
   src/platform/reduced_motion.hpp
   src/recovery_vault.cpp
   src/recovery_vault.hpp
   src/review_deck_model.cpp
   src/review_deck_model.hpp
+  src/vault/vault.cpp
+  src/vault/vault.hpp
   src/visual_encoder.cpp
   src/visual_encoder.hpp
   ../third_party/qrcodegen/qrcodegen.cpp
@@ -40,7 +44,7 @@ else()
   target_link_libraries(pms_desktop PUBLIC OpenSSL::Crypto)
 endif()
 if(APPLE)
-  target_link_libraries(pms_desktop PUBLIC "-framework CoreFoundation")
+  target_link_libraries(pms_desktop PUBLIC "-framework CoreFoundation" "-framework Security")
 endif()
 
 qt_add_executable(phone_memory_slider

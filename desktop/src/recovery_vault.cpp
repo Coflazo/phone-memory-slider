@@ -312,7 +312,7 @@ bool RecoveryVault::archive(
     const QString& plain_path,
     const QString& asset_id,
     const QString& original_name,
-    VaultEntry& entry) {
+    RecoveryVaultEntry& entry) {
     error_.clear();
     const QFileInfo source{plain_path};
     if (key_.size() != key_bytes || !source.isFile()) {
@@ -345,7 +345,7 @@ bool RecoveryVault::archive(
     return true;
 }
 
-bool RecoveryVault::restore(const VaultEntry& entry, const QString& destination) {
+bool RecoveryVault::restore(const RecoveryVaultEntry& entry, const QString& destination) {
     error_.clear();
     return decryptFile(entry.encryptedPath, destination, entry.sha256);
 }
@@ -564,7 +564,7 @@ bool RecoveryVault::decryptAndVerify(
     return true;
 }
 
-bool RecoveryVault::appendManifest(const VaultEntry& entry) {
+bool RecoveryVault::appendManifest(const RecoveryVaultEntry& entry) {
     QFile manifest{QDir{root_}.filePath(QStringLiteral("manifest.jsonl"))};
     if (!manifest.open(QIODevice::WriteOnly | QIODevice::Append)) {
         setError(manifest.errorString());
