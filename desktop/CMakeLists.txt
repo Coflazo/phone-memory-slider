@@ -35,6 +35,18 @@ else()
   target_link_libraries(pms_desktop PUBLIC OpenSSL::Crypto)
 endif()
 
+# v2 phone link client (docs/PROTOCOL.md) over a transport-agnostic ByteStream. A library of its own so its tests link
+# only the link code; it links pms_link, never pms_link_testing.
+add_library(pms_desktop_link STATIC
+  src/link/byte_stream.hpp
+  src/link/companion_client.cpp
+  src/link/companion_client.hpp
+  src/link/pipe_stream.cpp
+  src/link/pipe_stream.hpp
+)
+target_include_directories(pms_desktop_link PUBLIC src)
+target_link_libraries(pms_desktop_link PUBLIC pms_link Qt6::Core)
+
 qt_add_executable(phone_memory_slider
   src/main.cpp
 )

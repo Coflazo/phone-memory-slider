@@ -30,6 +30,9 @@ enum class MsgType : std::uint8_t { Hello = 0x01, HelloAck = 0x02, CatalogSince 
     TrashRequest = 0x20, TrashResult = 0x21, Error = 0x30, Bye = 0x31 };
 enum class ItemStatus : std::uint8_t { Ok = 0, Missing = 1, Unreadable = 2, Busy = 3 };
 enum class TrashOutcome : std::uint8_t { Trashed = 0, UserDeclined = 1, Changed = 2, Missing = 3, Favorite = 4, Failed = 5 };
+// ErrorMsg codes (docs/PROTOCOL.md section 9). 1 to 4 close the connection; receivers treat unknown codes as Internal.
+enum class ErrorCode : std::uint16_t { Malformed = 1, UnsupportedProtocol = 2, FlowControl = 3, UnexpectedMessage = 4,
+    PermissionDenied = 5, Busy = 6, Internal = 7 };
 
 struct Hello { std::uint16_t protocol{1}; std::string model; std::string os; std::string app_version; std::uint32_t capabilities{}; };
 struct HelloAck { std::uint16_t protocol{1}; std::string desktop_name; };

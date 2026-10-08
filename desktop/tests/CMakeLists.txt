@@ -12,3 +12,13 @@ foreach(test_name IN ITEMS app_controller catalog_store device_connector phone_c
     )
   endif()
 endforeach()
+
+# The v2 link client against a scripted phone that runs the real Noise handshake.
+add_executable(pms_companion_client_tests companion_client_tests.cpp fake_phone.cpp fake_phone.hpp)
+target_link_libraries(pms_companion_client_tests PRIVATE pms_desktop_link Qt6::Test)
+add_test(NAME pms_companion_client_tests COMMAND pms_companion_client_tests)
+if(WIN32)
+  set_tests_properties(pms_companion_client_tests PROPERTIES
+    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
+  )
+endif()
