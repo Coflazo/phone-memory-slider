@@ -37,8 +37,10 @@ struct DeleteModel {
 // MAP fit on swipe labels (deleted[i] = 1 for a swipe delete, 0 for a keep):
 //   minimize sum_i logloss(deleted_i, logit(x_i)) + |theta - theta0|^2 / (2 prior_sigma^2),
 // theta = [beta, bias], theta0 = the prior's. Damped Newton (exact 9x9 Hessian, Cholesky solve, the step halved
-// until the objective falls), at most 25 iterations, stopping once a step is shorter than 1e-8. No labels gives
-// the prior exactly. Throws std::invalid_argument when x and deleted differ in size, a label is not 0 or 1, a
+// until the objective falls), at most 25 iterations, stopping once a step is shorter than 1e-8. If the Hessian is
+// not numerically positive definite (the Cholesky solve fails, which only extreme features can cause), the fit stops
+// and returns the current theta: the prior itself when that happens on the first step. No labels gives the prior
+// exactly. Throws std::invalid_argument when x and deleted differ in size, a label is not 0 or 1, a
 // feature or a prior weight is not finite, or prior_sigma is not finite and > 0.
 [[nodiscard]] DeleteModel fit_delete_model(std::span<const DeleteFeatures> x, std::span<const std::uint8_t> deleted,
                                            const DeleteModel& prior, float prior_sigma = 1.0F);

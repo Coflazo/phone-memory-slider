@@ -9,10 +9,12 @@ namespace {
 
 constexpr std::size_t min_samples = 20;
 constexpr auto min_history = std::chrono::seconds(3);
+constexpr double stall_gaps = 3.0;                    // stalled: no advance for this many average gaps
+constexpr auto min_stall = std::chrono::seconds(5);   // ... and for at least this long
 constexpr auto hold_time = std::chrono::seconds(15);  // hysteresis: refresh the shown value at least this often
 constexpr double min_change = 0.10;                   // ... or when it moves by more than this fraction
 
-double seconds(const EtaClock::duration d) { return std::chrono::duration<double>(d).count(); }
+double seconds(const EtaClock::duration d) noexcept { return std::chrono::duration<double>(d).count(); }
 
 }  // namespace
 
@@ -40,11 +42,11 @@ void EtaEstimator::update(const std::size_t stage, const StageProgress progress,
 }
 
 // Drop samples older than the window, keeping the last one at or before its start as the baseline.
-void EtaEstimator::trim(Stage& stage, const EtaClock::time_point now) const {
+void EtaEstimator::trim(Stage& stage, const EtaClock::time_point now) const noexcept {
     while (stage.samples.size() >= 2 && stage.samples[1].time <= now - window_) stage.samples.pop_front();
 }
 
-double EtaEstimator::rate(const Stage& stage, const EtaClock::time_point now) {
+double EtaEstimator::rate(const Stage& stage, const EtaClock::time_point now) noexcept {
     const auto& samples = stage.samples;
     std::size_t first = 0, last = 0, advances = 0;  // samples that moved done forward
     for (std::size_t k = 1; k < samples.size(); ++k)
@@ -55,11 +57,13 @@ double EtaEstimator::rate(const Stage& stage, const EtaClock::time_point now) {
     if (advances < 2) return 0.0;  // no progress in the window, or too little to measure a rate
     const double between = seconds(samples[last].time - samples[first].time);
     const double gap = between / static_cast<double>(advances - 1);  // average time between advances
+    // A stall: show Estimating rather than a ladder of estimates that rise with every second of waiting.
+    if (seconds(now - samples[last].time) > std::max(stall_gaps * gap, seconds(min_stall))) return 0.0;
     const double span = std::max(between, seconds(now - samples[first].time) - gap);
     return (samples[last].done - samples[first].done) / span;
 }
 
-EtaDisplay EtaEstimator::display(const EtaClock::time_point now) {
+EtaDisplay EtaEstimator::display(const EtaClock::time_point now) noexcept {
     const auto finished = [](const Stage& s) { return s.total_known && s.samples.back().done >= s.total; };
     const auto estimating = [this] {
         showing_ = false;

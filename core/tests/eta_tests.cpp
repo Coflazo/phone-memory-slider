@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>  // TEMP-R19
 #include <functional>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 #include "pms/eta.hpp"
 #include "test_harness.hpp"
@@ -105,6 +107,29 @@ void run_eta_tests() {
             pms_check(shown_now.seconds >= 300, "while stalling, the ETA rises instead of freezing or falling");
         if (s >= 185) pms_check(shown_now.phase == EtaPhase::Remaining && std::abs(shown_now.seconds - (2000 - done) / 5) < 0.15 * ((2000 - done) / 5), "progress resuming shows a time again");
     }
+    // Ruling R19: the same stall shows Estimating within a few typical gaps, not a ladder of rising estimates.
+    pms::EtaEstimator pause(1);
+    double before = 0.0, peak = 0.0;
+    int estimating_from = -1;  // the second from which the stall shows Estimating to its end
+    for (int s = 0; s <= 180; ++s) {
+        const double done = std::min(5.0 * s, 500.0);  // 5 items/s, then nothing from 100 s on (updates keep coming)
+        const auto now = pms::EtaClock::time_point{} + seconds(s);
+        pause.update(0, {done, 2000}, now);
+        const auto shown_now = pause.display(now);
+        if (s == 99) before = shown_now.seconds;
+        if (s < 100) continue;
+        if (shown_now.phase == EtaPhase::Remaining) {
+            peak = std::max(peak, shown_now.seconds);
+            estimating_from = -1;
+        } else if (estimating_from < 0) {
+            estimating_from = s;
+        }
+    }
+    std::printf("TEMP-R19 pre-stall %.1f peak %.1f estimating-from %d\n", before, peak, estimating_from);  // TEMP-R19
+    pms_check(before > 0 && peak <= 2 * before, "a stall never shows more than twice the pre-stall ETA (pre-stall " + std::to_string(before) +
+                                                    " s, peak " + std::to_string(peak) + " s)");
+    pms_check(estimating_from >= 100 && estimating_from <= 110,
+              "a stall shows Estimating within 10 s of the last advance (from " + std::to_string(estimating_from) + " s)");
     // A producer that stops calling update: display alone falls back to Estimating after one window.
     pms::EtaEstimator silent(1);
     for (int s = 0; s < 60; ++s) silent.update(0, {5.0 * s, 2000}, pms::EtaClock::time_point{} + seconds(s));

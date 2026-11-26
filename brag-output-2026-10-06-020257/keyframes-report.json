@@ -1,0 +1,2917 @@
+﻿{
+  "project": "composition",
+  "runtime": "all",
+  "compositions": [
+    {
+      "composition": "index.html",
+      "source": "index.html",
+      "tweens": [
+        {
+          "id": "#hero-title span-set-0",
+          "target": "#hero-title span",
+          "method": "set",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "y": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "y": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".trash-sheet > *-set-0-visual",
+          "target": ".trash-sheet > *",
+          "method": "set",
+          "group": "visual",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".trash-sheet",
+              "summary": "y 0..380"
+            },
+            {
+              "selector": "#summary-phone",
+              "summary": "x 0..110, y -8..30, opacity 0..1, rotation 0..4"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".hero-tile.one-fromTo-0-position",
+          "target": ".hero-tile.one",
+          "method": "fromTo",
+          "group": "position",
+          "start": 0,
+          "duration": 1.35,
+          "end": 1.35,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "x": -44,
+                "y": 34
+              }
+            },
+            {
+              "pct": 100,
+              "time": 1.35,
+              "properties": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -44,
+              "y": 34
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".hero-tile.two-fromTo-0-position",
+          "target": ".hero-tile.two",
+          "method": "fromTo",
+          "group": "position",
+          "start": 0,
+          "duration": 1.45,
+          "end": 1.45,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "x": 52,
+                "y": 42
+              }
+            },
+            {
+              "pct": 100,
+              "time": 1.45,
+              "properties": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 52,
+              "y": 42
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".hero-tile.three-fromTo-150-position",
+          "target": ".hero-tile.three",
+          "method": "fromTo",
+          "group": "position",
+          "start": 0.15,
+          "duration": 1.1,
+          "end": 1.25,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0.15,
+              "properties": {
+                "x": 34,
+                "y": -26
+              }
+            },
+            {
+              "pct": 100,
+              "time": 1.25,
+              "properties": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 34,
+              "y": -26
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".hero-proof .proof-chip-fromTo-500",
+          "target": ".hero-proof .proof-chip",
+          "method": "fromTo",
+          "start": 0.5,
+          "duration": 0.55,
+          "end": 1.05,
+          "shape": "keyframes",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0.5,
+              "properties": {
+                "opacity": 0,
+                "y": 18,
+                "stagger": 9
+              }
+            },
+            {
+              "pct": 100,
+              "time": 1.05,
+              "properties": {
+                "opacity": 1,
+                "y": 0,
+                "stagger": 9
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 18
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#hero-title span-to-1150-position",
+          "target": "#hero-title span",
+          "method": "to",
+          "group": "position",
+          "start": 1.15,
+          "duration": 0.55,
+          "end": 1.7,
+          "shape": "keyframes",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 1.15,
+              "properties": {
+                "y": 0,
+                "stagger": 8
+              }
+            },
+            {
+              "pct": 100,
+              "time": 1.7,
+              "properties": {
+                "y": -7,
+                "stagger": 8
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": -7
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#hero",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#hero-to-2930",
+          "target": "#hero",
+          "method": "to",
+          "start": 2.93,
+          "duration": 0.34,
+          "end": 3.27,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 2.93,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 3.27,
+              "properties": {
+                "opacity": 0,
+                "scale": 0.975
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#pair-set-3270-visual",
+          "target": "#pair",
+          "method": "set",
+          "group": "visual",
+          "start": 3.27,
+          "duration": 0,
+          "end": 3.27,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 3.27,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 3.27,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#pair-desktop-fromTo-3270",
+          "target": "#pair-desktop",
+          "method": "fromTo",
+          "start": 3.27,
+          "duration": 0.9,
+          "end": 4.17,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 3.27,
+              "properties": {
+                "scale": 0.94,
+                "rotationY": 7,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 4.17,
+              "properties": {
+                "scale": 1,
+                "rotationY": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#pair-phone-fromTo-3450",
+          "target": "#pair-phone",
+          "method": "fromTo",
+          "start": 3.45,
+          "duration": 0.9,
+          "end": 4.35,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 3.45,
+              "properties": {
+                "scale": 0.86,
+                "rotation": 5,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 4.35,
+              "properties": {
+                "scale": 1,
+                "rotation": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".connection-line-fromTo-4280-scale",
+          "target": ".connection-line",
+          "method": "fromTo",
+          "group": "scale",
+          "start": 4.28,
+          "duration": 0.8,
+          "end": 5.08,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 4.28,
+              "properties": {
+                "scaleX": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 5.08,
+              "properties": {
+                "scaleX": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".connection-dot-fromTo-4320-position",
+          "target": ".connection-dot",
+          "method": "fromTo",
+          "group": "position",
+          "start": 4.32,
+          "duration": 0.85,
+          "end": 5.17,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 4.32,
+              "properties": {
+                "x": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 5.17,
+              "properties": {
+                "x": 344
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 344,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".connection-line",
+              "summary": "scaleX 0..1"
+            },
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".qr-card-fromTo-4080",
+          "target": ".qr-card",
+          "method": "fromTo",
+          "start": 4.08,
+          "duration": 0.48,
+          "end": 4.56,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 4.08,
+              "properties": {
+                "scale": 0.82,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 4.56,
+              "properties": {
+                "scale": 1,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#pair-desktop",
+              "summary": "rotationY 0..7, opacity 0..1"
+            },
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".phone-permission-fromTo-6200",
+          "target": ".phone-permission",
+          "method": "fromTo",
+          "start": 6.2,
+          "duration": 0.38,
+          "end": 6.58,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 6.2,
+              "properties": {
+                "y": 24,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 6.58,
+              "properties": {
+                "y": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 24
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#pair-phone",
+              "summary": "rotation 0..5, opacity 0..1, y -7..0"
+            },
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#pair-phone-to-6350-position",
+          "target": "#pair-phone",
+          "method": "to",
+          "group": "position",
+          "start": 6.35,
+          "duration": 0.7,
+          "end": 7.05,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 6.35,
+              "properties": {
+                "y": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 7.05,
+              "properties": {
+                "y": -7
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": -7
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#pair",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#pair-to-8380-visual",
+          "target": "#pair",
+          "method": "to",
+          "group": "visual",
+          "start": 8.38,
+          "duration": 0.36,
+          "end": 8.74,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 8.38,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 8.74,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#scan-set-8740-visual",
+          "target": "#scan",
+          "method": "set",
+          "group": "visual",
+          "start": 8.74,
+          "duration": 0,
+          "end": 8.74,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 8.74,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 8.74,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".scan-copy-fromTo-8740",
+          "target": ".scan-copy",
+          "method": "fromTo",
+          "start": 8.74,
+          "duration": 0.62,
+          "end": 9.36,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 8.74,
+              "properties": {
+                "x": -80,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 9.36,
+              "properties": {
+                "x": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -80,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#scan",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".scan-board-fromTo-8780",
+          "target": ".scan-board",
+          "method": "fromTo",
+          "start": 8.78,
+          "duration": 0.64,
+          "end": 9.42,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 8.78,
+              "properties": {
+                "scale": 0.9,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 9.42,
+              "properties": {
+                "scale": 1,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#scan",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".scan-line-fromTo-9000-position",
+          "target": ".scan-line",
+          "method": "fromTo",
+          "group": "position",
+          "start": 9,
+          "duration": 1.65,
+          "end": 10.65,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 9,
+              "properties": {
+                "y": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 10.65,
+              "properties": {
+                "y": 620
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 620
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".scan-board",
+              "summary": "opacity 0..1"
+            },
+            {
+              "selector": "#scan",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".scan-orbit-fromTo-8850",
+          "target": ".scan-orbit",
+          "method": "fromTo",
+          "start": 8.85,
+          "duration": 1.8,
+          "end": 10.65,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 8.85,
+              "properties": {
+                "rotation": -30,
+                "scale": 0.82
+              }
+            },
+            {
+              "pct": 100,
+              "time": 10.65,
+              "properties": {
+                "rotation": 210,
+                "scale": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".scan-board",
+              "summary": "opacity 0..1"
+            },
+            {
+              "selector": "#scan",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".contact-sheet img-fromTo-9020",
+          "target": ".contact-sheet img",
+          "method": "fromTo",
+          "start": 9.02,
+          "duration": 0.42,
+          "end": 9.44,
+          "shape": "keyframes",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 9.02,
+              "properties": {
+                "opacity": 0.25,
+                "scale": 0.94,
+                "stagger": 8
+              }
+            },
+            {
+              "pct": 100,
+              "time": 9.44,
+              "properties": {
+                "opacity": 1,
+                "scale": 1,
+                "stagger": 8
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".scan-board",
+              "summary": "opacity 0..1"
+            },
+            {
+              "selector": "#scan",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#scan-to-11140",
+          "target": "#scan",
+          "method": "to",
+          "start": 11.14,
+          "duration": 0.32,
+          "end": 11.46,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 11.14,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 11.46,
+              "properties": {
+                "opacity": 0,
+                "scale": 1.04
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#review-set-11460-visual",
+          "target": "#review",
+          "method": "set",
+          "group": "visual",
+          "start": 11.46,
+          "duration": 0,
+          "end": 11.46,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 11.46,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 11.46,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".review-copy-fromTo-11460",
+          "target": ".review-copy",
+          "method": "fromTo",
+          "start": 11.46,
+          "duration": 0.65,
+          "end": 12.11,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 11.46,
+              "properties": {
+                "x": -90,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.11,
+              "properties": {
+                "x": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -90,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".review-stage-fromTo-11460",
+          "target": ".review-stage",
+          "method": "fromTo",
+          "start": 11.46,
+          "duration": 0.78,
+          "end": 12.24,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 11.46,
+              "properties": {
+                "x": 180,
+                "opacity": 0,
+                "rotation": 3
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.24,
+              "properties": {
+                "x": 0,
+                "opacity": 1,
+                "rotation": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 180,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".decision-stamp.delete-to-12120",
+          "target": ".decision-stamp.delete",
+          "method": "to",
+          "start": 12.12,
+          "duration": 0.24,
+          "end": 12.36,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 12.12,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.36,
+              "properties": {
+                "opacity": 1,
+                "scale": 1.05
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-1 .review-meta-to-12300-visual",
+          "target": "#review-card-1 .review-meta",
+          "method": "to",
+          "group": "visual",
+          "start": 12.3,
+          "duration": 0.18,
+          "end": 12.48,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 12.3,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.48,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#review-card-1",
+              "summary": "x -940..0, y 0..70, rotation -18..0"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-1-to-12340",
+          "target": "#review-card-1",
+          "method": "to",
+          "start": 12.34,
+          "duration": 0.78,
+          "end": 13.12,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 12.34,
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "rotation": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 13.12,
+              "properties": {
+                "x": -940,
+                "y": 70,
+                "rotation": -18
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": -940,
+              "y": 70
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".decision-stamp.delete-to-12550-visual",
+          "target": ".decision-stamp.delete",
+          "method": "to",
+          "group": "visual",
+          "start": 12.55,
+          "duration": 0.16,
+          "end": 12.71,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 12.55,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.71,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-2-to-12360",
+          "target": "#review-card-2",
+          "method": "to",
+          "start": 12.36,
+          "duration": 0.62,
+          "end": 12.98,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 12.36,
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "rotation": 0,
+                "scale": 1,
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 12.98,
+              "properties": {
+                "x": -22,
+                "y": -18,
+                "rotation": 0,
+                "scale": 1,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": -22,
+              "y": -18
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-2 .review-meta-to-13100-visual",
+          "target": "#review-card-2 .review-meta",
+          "method": "to",
+          "group": "visual",
+          "start": 13.1,
+          "duration": 0.24,
+          "end": 13.34,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 13.1,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 13.34,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#review-card-2",
+              "summary": "x -22..920, y -18..54, rotation 0..17"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".deck-count-to-13000-visual",
+          "target": ".deck-count",
+          "method": "to",
+          "group": "visual",
+          "start": 13,
+          "duration": 0.12,
+          "end": 13.12,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 13,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 13.12,
+              "properties": {
+                "opacity": 0.2
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".decision-stamp.keep-to-13780",
+          "target": ".decision-stamp.keep",
+          "method": "to",
+          "start": 13.78,
+          "duration": 0.24,
+          "end": 14.02,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 13.78,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 14.02,
+              "properties": {
+                "opacity": 1,
+                "scale": 1.05
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-2 .review-meta-to-14080-visual",
+          "target": "#review-card-2 .review-meta",
+          "method": "to",
+          "group": "visual",
+          "start": 14.08,
+          "duration": 0.18,
+          "end": 14.26,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.08,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 14.26,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#review-card-2",
+              "summary": "x -22..920, y -18..54, rotation 0..17"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-2-to-14200",
+          "target": "#review-card-2",
+          "method": "to",
+          "start": 14.2,
+          "duration": 0.78,
+          "end": 14.98,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.2,
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "rotation": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 14.98,
+              "properties": {
+                "x": 920,
+                "y": 54,
+                "rotation": 17
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 920,
+              "y": 54
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".decision-stamp.keep-to-14440-visual",
+          "target": ".decision-stamp.keep",
+          "method": "to",
+          "group": "visual",
+          "start": 14.44,
+          "duration": 0.16,
+          "end": 14.6,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.44,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 14.6,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-3-to-14200",
+          "target": "#review-card-3",
+          "method": "to",
+          "start": 14.2,
+          "duration": 0.65,
+          "end": 14.85,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.2,
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "rotation": 0,
+                "scale": 1,
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 14.85,
+              "properties": {
+                "x": 28,
+                "y": -28,
+                "rotation": 0,
+                "scale": 1,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 28,
+              "y": -28
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-3 .review-meta, #review-card-3 .video-chrome-to-15000-visual",
+          "target": "#review-card-3 .review-meta, #review-card-3 .video-chrome",
+          "method": "to",
+          "group": "visual",
+          "start": 15,
+          "duration": 0.28,
+          "end": 15.28,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 15,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 15.28,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#review-card-3",
+              "summary": "x 0..28, y -36..0"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#video-image-to-14580",
+          "target": "#video-image",
+          "method": "to",
+          "start": 14.58,
+          "duration": 2.3,
+          "end": 16.88,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.58,
+              "properties": {
+                "x": 0,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 16.88,
+              "properties": {
+                "x": 58,
+                "scale": 1.08
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 58,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#review-card-3",
+              "summary": "x 0..28, y -36..0"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".video-fill-to-14580-size",
+          "target": ".video-fill",
+          "method": "to",
+          "group": "size",
+          "start": 14.58,
+          "duration": 2.1,
+          "end": 16.68,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 14.58,
+              "properties": {
+                "width": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 16.68,
+              "properties": {
+                "width": "76%"
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": "#review-card-3 .review-meta, #review-card-3 .video-chrome",
+              "summary": "(static)"
+            },
+            {
+              "selector": "#review-card-3",
+              "summary": "x 0..28, y -36..0"
+            },
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-card-3-to-15200-position",
+          "target": "#review-card-3",
+          "method": "to",
+          "group": "position",
+          "start": 15.2,
+          "duration": 0.52,
+          "end": 15.72,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 15.2,
+              "properties": {
+                "y": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 15.72,
+              "properties": {
+                "y": -36
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": -36
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".review-stage",
+              "summary": "x 0..180, opacity 0..1, rotation 0..3"
+            },
+            {
+              "selector": "#review",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#review-to-17130-visual",
+          "target": "#review",
+          "method": "to",
+          "group": "visual",
+          "start": 17.13,
+          "duration": 0.34,
+          "end": 17.47,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 17.13,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 17.47,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#summary-set-17470-visual",
+          "target": "#summary",
+          "method": "set",
+          "group": "visual",
+          "start": 17.47,
+          "duration": 0,
+          "end": 17.47,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 17.47,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 17.47,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".summary-panel-fromTo-17470",
+          "target": ".summary-panel",
+          "method": "fromTo",
+          "start": 17.47,
+          "duration": 0.72,
+          "end": 18.19,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 17.47,
+              "properties": {
+                "x": -110,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 18.19,
+              "properties": {
+                "x": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -110,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#summary-phone-fromTo-17550",
+          "target": "#summary-phone",
+          "method": "fromTo",
+          "start": 17.55,
+          "duration": 0.78,
+          "end": 18.33,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 17.55,
+              "properties": {
+                "x": 110,
+                "y": 30,
+                "opacity": 0,
+                "rotation": 4
+              }
+            },
+            {
+              "pct": 100,
+              "time": 18.33,
+              "properties": {
+                "x": 0,
+                "y": 0,
+                "opacity": 1,
+                "rotation": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 110,
+              "y": 30
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".summary-row-fromTo-18200",
+          "target": ".summary-row",
+          "method": "fromTo",
+          "start": 18.2,
+          "duration": 0.46,
+          "end": 18.66,
+          "shape": "keyframes",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 18.2,
+              "properties": {
+                "x": -34,
+                "opacity": 0,
+                "stagger": 13
+              }
+            },
+            {
+              "pct": 100,
+              "time": 18.66,
+              "properties": {
+                "x": 0,
+                "opacity": 1,
+                "stagger": 13
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -34,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": ".summary-panel",
+              "summary": "x -110..0, opacity 0..1"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#summary-number-fromTo-18250-other",
+          "target": "#summary-number",
+          "method": "fromTo",
+          "group": "other",
+          "start": 18.25,
+          "duration": 1.15,
+          "end": 19.4,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 18.25,
+              "properties": {
+                "textContent": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 19.4,
+              "properties": {
+                "textContent": 1.42
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".summary-panel",
+              "summary": "x -110..0, opacity 0..1"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".trash-sheet-fromTo-19100-position",
+          "target": ".trash-sheet",
+          "method": "fromTo",
+          "group": "position",
+          "start": 19.1,
+          "duration": 0.82,
+          "end": 19.92,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 19.1,
+              "properties": {
+                "y": 380
+              }
+            },
+            {
+              "pct": 100,
+              "time": 19.92,
+              "properties": {
+                "y": 0
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 380
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#summary-phone",
+              "summary": "x 0..110, y -8..30, opacity 0..1, rotation 0..4"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".trash-sheet > *-to-19720-visual",
+          "target": ".trash-sheet > *",
+          "method": "to",
+          "group": "visual",
+          "start": 19.72,
+          "duration": 0.28,
+          "end": 20,
+          "shape": "keyframes",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 19.72,
+              "properties": {
+                "opacity": 0,
+                "stagger": 6
+              }
+            },
+            {
+              "pct": 100,
+              "time": 20,
+              "properties": {
+                "opacity": 1,
+                "stagger": 6
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".trash-sheet",
+              "summary": "y 0..380"
+            },
+            {
+              "selector": "#summary-phone",
+              "summary": "x 0..110, y -8..30, opacity 0..1, rotation 0..4"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": ".confirm-fromTo-20100-scale",
+          "target": ".confirm",
+          "method": "fromTo",
+          "group": "scale",
+          "start": 20.1,
+          "duration": 0.36,
+          "end": 20.46,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 20.1,
+              "properties": {
+                "scale": 0.92
+              }
+            },
+            {
+              "pct": 100,
+              "time": 20.46,
+              "properties": {
+                "scale": 1
+              }
+            }
+          ],
+          "path": null,
+          "composedWith": [
+            {
+              "selector": ".trash-sheet > *",
+              "summary": "opacity 0..1"
+            },
+            {
+              "selector": ".trash-sheet",
+              "summary": "y 0..380"
+            },
+            {
+              "selector": "#summary-phone",
+              "summary": "x 0..110, y -8..30, opacity 0..1, rotation 0..4"
+            },
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#summary-phone-to-20400-position",
+          "target": "#summary-phone",
+          "method": "to",
+          "group": "position",
+          "start": 20.4,
+          "duration": 0.7,
+          "end": 21.1,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 20.4,
+              "properties": {
+                "y": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 21.1,
+              "properties": {
+                "y": -8
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": -8
+            }
+          ],
+          "composedWith": [
+            {
+              "selector": "#summary",
+              "summary": "opacity 0..1"
+            }
+          ]
+        },
+        {
+          "id": "#summary-to-22630-visual",
+          "target": "#summary",
+          "method": "to",
+          "group": "visual",
+          "start": 22.63,
+          "duration": 0.3,
+          "end": 22.93,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 22.63,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 22.93,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": "#outro-set-22930-visual",
+          "target": "#outro",
+          "method": "set",
+          "group": "visual",
+          "start": 22.93,
+          "duration": 0,
+          "end": 22.93,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 22.93,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 22.93,
+              "properties": {
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".outro-lockup .brand-mark-fromTo-22930",
+          "target": ".outro-lockup .brand-mark",
+          "method": "fromTo",
+          "start": 22.93,
+          "duration": 0.46,
+          "end": 23.39,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 22.93,
+              "properties": {
+                "scale": 0.45,
+                "rotation": -14,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 23.39,
+              "properties": {
+                "scale": 1,
+                "rotation": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".outro-rule-to-23080-size",
+          "target": ".outro-rule",
+          "method": "to",
+          "group": "size",
+          "start": 23.08,
+          "duration": 0.42,
+          "end": 23.5,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 23.08,
+              "properties": {
+                "width": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 23.5,
+              "properties": {
+                "width": 96
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".outro-name-fromTo-23180",
+          "target": ".outro-name",
+          "method": "fromTo",
+          "start": 23.18,
+          "duration": 0.42,
+          "end": 23.6,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 23.18,
+              "properties": {
+                "x": -24,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 23.6,
+              "properties": {
+                "x": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": -24,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": ".outro-sub-fromTo-23420",
+          "target": ".outro-sub",
+          "method": "fromTo",
+          "start": 23.42,
+          "duration": 0.35,
+          "end": 23.77,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 23.42,
+              "properties": {
+                "y": 12,
+                "opacity": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 23.77,
+              "properties": {
+                "y": 0,
+                "opacity": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 12
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "traces": [
+        {
+          "target": "#review-card-2",
+          "strokes": [
+            {
+              "id": "#review-card-2-to-12360",
+              "start": 12.36,
+              "end": 12.98,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 12.36,
+                  "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "rotation": 0,
+                    "scale": 1,
+                    "opacity": 1
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 12.98,
+                  "properties": {
+                    "x": -22,
+                    "y": -18,
+                    "rotation": 0,
+                    "scale": 1,
+                    "opacity": 1
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": -22,
+                  "y": -18
+                }
+              ]
+            },
+            {
+              "id": "#review-card-2-to-14200",
+              "start": 14.2,
+              "end": 14.98,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 14.2,
+                  "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "rotation": 0
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 14.98,
+                  "properties": {
+                    "x": 920,
+                    "y": 54,
+                    "rotation": 17
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 920,
+                  "y": 54
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "target": "#review-card-3",
+          "strokes": [
+            {
+              "id": "#review-card-3-to-14200",
+              "start": 14.2,
+              "end": 14.85,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 14.2,
+                  "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "rotation": 0,
+                    "scale": 1,
+                    "opacity": 1
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 14.85,
+                  "properties": {
+                    "x": 28,
+                    "y": -28,
+                    "rotation": 0,
+                    "scale": 1,
+                    "opacity": 1
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 28,
+                  "y": -28
+                }
+              ]
+            },
+            {
+              "id": "#review-card-3-to-15200-position",
+              "start": 15.2,
+              "end": 15.72,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 15.2,
+                  "properties": {
+                    "y": 0
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 15.72,
+                  "properties": {
+                    "y": -36
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": -36
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "target": "#summary-phone",
+          "strokes": [
+            {
+              "id": "#summary-phone-fromTo-17550",
+              "start": 17.55,
+              "end": 18.33,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 17.55,
+                  "properties": {
+                    "x": 110,
+                    "y": 30,
+                    "opacity": 0,
+                    "rotation": 4
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 18.33,
+                  "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "opacity": 1,
+                    "rotation": 0
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 110,
+                  "y": 30
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ]
+            },
+            {
+              "id": "#summary-phone-to-20400-position",
+              "start": 20.4,
+              "end": 21.1,
+              "keyframes": [
+                {
+                  "pct": 0,
+                  "time": 20.4,
+                  "properties": {
+                    "y": 0
+                  }
+                },
+                {
+                  "pct": 100,
+                  "time": 21.1,
+                  "properties": {
+                    "y": -8
+                  }
+                }
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": -8
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "cssKeyframes": [
+        {
+          "name": "hf-grain-noise",
+          "selectors": [
+            "#grain-overlay .grain-texture"
+          ],
+          "keyframes": [
+            {
+              "selector": "0%,100%",
+              "declarations": [
+                "transform:translate(0,0)"
+              ]
+            },
+            {
+              "selector": "20%",
+              "declarations": [
+                "transform:translate(-8%,5%)"
+              ]
+            },
+            {
+              "selector": "40%",
+              "declarations": [
+                "transform:translate(5%,-8%)"
+              ]
+            },
+            {
+              "selector": "60%",
+              "declarations": [
+                "transform:translate(9%,2%)"
+              ]
+            },
+            {
+              "selector": "80%",
+              "declarations": [
+                "transform:translate(-6%,-4%)"
+              ]
+            }
+          ]
+        }
+      ],
+      "anime": []
+    },
+    {
+      "composition": "camera-scan-gate",
+      "source": "compositions/components/camera-scan-gate.html",
+      "tweens": [
+        {
+          "id": ".csg-stage-to-0",
+          "target": ".csg-stage",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-sweep-to-__raw:SWEEP_START-position",
+          "target": ".csg-sweep",
+          "method": "to",
+          "group": "position",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "yPercent": 0
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "yPercent": 100
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": ".csg-sweep-set-__raw:SWEEP_LANDS-visual",
+          "target": ".csg-sweep",
+          "method": "set",
+          "group": "visual",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 0
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-corner-layer-to-__raw:LOCK_AT-scale",
+          "target": ".csg-corner-layer",
+          "method": "to",
+          "group": "scale",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "scale": 0.6
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-target-to-__raw:LOCK_AT",
+          "target": ".csg-target",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-check-to-__raw:LOCK_AT",
+          "target": ".csg-check",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-label-to-__raw:LOCK_AT",
+          "target": ".csg-label",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "y": 0,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "y": 0,
+                "scale": 1
+              }
+            }
+          ],
+          "path": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": ".csg-pulse-to-__raw:LOCK_AT",
+          "target": ".csg-pulse",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 0.9,
+                "scale": 1.25
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-ambient-to-__raw:HOLD_START",
+          "target": ".csg-ambient",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 0.3,
+                "scale": 1.015
+              }
+            }
+          ],
+          "path": null
+        },
+        {
+          "id": ".csg-stage-to-__raw:OUT_START",
+          "target": ".csg-stage",
+          "method": "to",
+          "start": 0,
+          "duration": 0,
+          "end": 0,
+          "shape": "flat",
+          "keyframes": [
+            {
+              "pct": 0,
+              "time": 0,
+              "properties": {
+                "opacity": 1,
+                "scale": 1
+              }
+            },
+            {
+              "pct": 100,
+              "time": 0,
+              "properties": {
+                "opacity": 0,
+                "scale": 0.98
+              }
+            }
+          ],
+          "path": null
+        }
+      ],
+      "traces": [],
+      "cssKeyframes": [],
+      "anime": []
+    }
+  ],
+  "_meta": {
+    "version": "0.8.134",
+    "latestVersion": "0.8.134",
+    "updateAvailable": false
+  }
+}

@@ -38,22 +38,27 @@ struct EtaDisplay {
 // files, one big video), so the rate is measured between the first and the last sample in the window that
 // advanced: (done_last - done_first) / (t_last - t_first), exact for a steady stream and for evenly spaced bursts
 // alike. Once the time since the first advance exceeds that span plus one average gap between advances, the extra
-// wait is counted too, so a slowdown raises the estimate. Fewer than two advances in the window give no rate.
+// wait is counted too, so a slowdown raises the estimate. Fewer than two advances in the window give no rate, and so
+// does a stall: no advance for max(3 average gaps, 5 s) since the last one.
 //
 // Phases, in order: Done when every stage finished; Counting when a stage that reported has an unknown total
 // (the first such stage's done is the count); Estimating while any unfinished stage has not reported, has fewer
-// than 20 samples or less than 3 s of them, or advanced fewer than twice in the window (a stall, including a
+// than 20 samples or less than 3 s of them, advanced fewer than twice in the window, or stalled (including a
 // producer that stopped calling update); otherwise Remaining.
 //
 // Hysteresis: the shown seconds change only when the new value differs by more than 10% or 15 s passed since the
 // last change; leaving Remaining resets it. A stage whose done goes backwards restarts its evidence.
+// A stage must advance at least twice per window to show a time: report bytes rather than files when single items
+// are large (one long video), so progress keeps moving.
+//
+// Not thread-safe: call update and display from one thread, or lock around them.
 // ponytail: one sample per update kept for a window; decimate if a stage reports thousands of times a second.
 class EtaEstimator {
 public:
     explicit EtaEstimator(std::size_t stages, std::chrono::seconds window = std::chrono::seconds(30));
     // Throws std::out_of_range for a stage >= the count given to the constructor. Ignores non-finite values.
     void update(std::size_t stage, StageProgress progress, EtaClock::time_point now);
-    [[nodiscard]] EtaDisplay display(EtaClock::time_point now);
+    [[nodiscard]] EtaDisplay display(EtaClock::time_point now) noexcept;
 
 private:
     struct Sample {
@@ -67,8 +72,8 @@ private:
         double total{};
         bool total_known{true};
     };
-    void trim(Stage& stage, EtaClock::time_point now) const;
-    [[nodiscard]] static double rate(const Stage& stage, EtaClock::time_point now);
+    void trim(Stage& stage, EtaClock::time_point now) const noexcept;
+    [[nodiscard]] static double rate(const Stage& stage, EtaClock::time_point now) noexcept;
 
     std::vector<Stage> stages_;
     EtaClock::duration window_;
