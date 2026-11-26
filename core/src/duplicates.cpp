@@ -50,7 +50,16 @@ Forest connect(const std::size_t n, const std::size_t count, const unsigned thre
     std::vector<Forest> forests(workers, Forest(n));
     std::atomic<std::size_t> next{0};
     {
-        std::vector<std::jthread> pool;
+        // std::thread plus a joining guard: Apple's libc++ has no std::jthread. The guard is declared after the
+        // pool, so it joins every started thread before the vector is destroyed, also if a later start throws.
+        std::vector<std::thread> pool;
+        struct JoinAll {
+            std::vector<std::thread>& threads;
+            ~JoinAll() {
+                for (auto& t : threads)
+                    if (t.joinable()) t.join();
+            }
+        } join_all{pool};
         pool.reserve(workers);
         for (unsigned t = 0; t < workers; ++t)
             pool.emplace_back([&, t] {
