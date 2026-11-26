@@ -36,7 +36,10 @@ $forbiddenRuntime = $runtimeFiles | Select-String -Pattern @(
     '\bWinHttp[A-Za-z]+',
     '\bcurl_easy_',
     'https?://'
-)
+) | Where-Object {
+    # XMP's namespace URI is the APP1 segment identifier media_meta.cpp matches, not a network address
+    $_.Line -notmatch 'http://ns\.adobe\.com/xap/1\.0/'
+}
 if ($forbiddenRuntime) {
     $first = $forbiddenRuntime | Select-Object -First 1
     throw "Runtime egress primitive found: $($first.Path):$($first.LineNumber)"
