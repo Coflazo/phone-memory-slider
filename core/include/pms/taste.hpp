@@ -21,7 +21,7 @@ struct TasteConfig {
     // same values TasteReport::loss collects. Called synchronously on the thread running train_taste, never
     // concurrently; marshal to a GUI thread yourself. Not called when train_taste returns the zero model. An
     // exception it throws propagates out of train_taste.
-    std::function<void(int iteration, float loss)> on_iteration;
+    std::function<void(int iteration, float loss)> on_iteration{};
 };
 
 // Why training stopped.

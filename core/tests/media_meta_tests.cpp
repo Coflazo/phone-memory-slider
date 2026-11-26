@@ -157,7 +157,7 @@ void run_media_meta_tests() {
     pms_check(pms::parse_exif(camera_exif("2024:02:30 07:08:09", "")).captured_unix_ms == 0, "impossible date is unknown");
     pms_check(pms::parse_exif(camera_exif("0000:00:00 00:00:00", "")).captured_unix_ms == 0, "zeroed date is unknown");
 
-    for (const auto [little_tiff, little_note] : {std::pair{true, false}, std::pair{false, true}}) {
+    for (const auto& [little_tiff, little_note] : {std::pair{true, false}, std::pair{false, true}}) {
         const auto mixed = pms::parse_exif(apple_exif("ID-1", "BURST-2", little_tiff, little_note));
         pms_check(mixed.make == "Apple" && mixed.content_identifier == "ID-1" && mixed.burst_uuid == "BURST-2",
                   "MakerNote uses its own byte order, not the outer TIFF's");
