@@ -35,8 +35,8 @@ public:
         std::string helloModel{"Pixel 9"};  // encoded by hand, so a test can break the 1024-byte string cap
         std::uint16_t helloProtocol{1};
         bool sendHello{true};               // false: the test sends whatever comes first itself
-        QSet<quint64> declineTrash;         // the user declines Android's trash dialog for these
-        QSet<quint64> busyKeyframes;        // a KeyframesRequest for these is ended by Error Busy
+        QSet<quint64> declineTrash{};       // the user declines Android's trash dialog for these
+        QSet<quint64> busyKeyframes{};       // a KeyframesRequest for these is ended by Error Busy
         int trashDelayMs{0};                // time the user spends in the trash dialog
         bool burst{false};                  // answer everything queued in one write: many frames in one read
     };
