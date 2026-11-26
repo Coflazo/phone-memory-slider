@@ -37,8 +37,16 @@ static_assert(std::is_same_v<pms::link::ResponderSession, pms::link::testing_hoo
 static_assert(std::is_same_v<pms::link::InitiatorSession, pms::link::testing_hooks::InitiatorSession>);
 static_assert(std::is_same_v<pms::link::PairingWindow, pms::link::testing_hooks::PairingWindow>);
 static_assert(std::is_same_v<pms::link::detail::NoiseIk, pms::link::testing_hooks::detail::NoiseIk>);
+// Both sides name the same function, which is the point; GCC calls that a self-comparison (-Wtautological-compare).
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtautological-compare"
+#endif
 static_assert(&pms::link::generate_keypair == &pms::link::testing_hooks::generate_keypair);
 static_assert(&pms::link::set_fixed_ephemeral_for_tests == &pms::link::testing_hooks::set_fixed_ephemeral_for_tests);
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 namespace {
 struct MemoryPins : pms::link::PinStore {
