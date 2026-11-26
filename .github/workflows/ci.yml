@@ -34,6 +34,33 @@ jobs:
         run: ./build/tools/Release/pms_benchmark.exe
         if: runner.os == 'Windows'
 
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz-corpus
+          key: fuzz-corpus-${{ github.sha }}
+          restore-keys: fuzz-corpus-
+      - name: Configure (clang, libFuzzer, ASan, UBSan)
+        run: cmake -S . -B build-fuzz -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DPMS_BUILD_FUZZ=ON -DPMS_BUILD_TESTS=OFF -DPMS_BUILD_DESKTOP=OFF
+      - name: Build
+        run: cmake --build build-fuzz --parallel
+      - name: Fuzz every target for 120 s
+        run: |
+          mkdir -p fuzz-artifacts
+          for target in frames messages qr handshake media_meta sniff; do
+            mkdir -p "fuzz-corpus/$target"
+            ./build-fuzz/fuzz/fuzz_$target -max_total_time=120 -print_final_stats=1 -artifact_prefix="fuzz-artifacts/$target-" "fuzz-corpus/$target" "fuzz/corpus/$target"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: fuzz-crashes
+          path: fuzz-artifacts
+
   desktop:
     strategy:
       fail-fast: false
@@ -44,7 +71,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Linux graphics dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 ninja-build
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 libsecret-1-dev ninja-build
       - uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:
           version: '6.8.3'

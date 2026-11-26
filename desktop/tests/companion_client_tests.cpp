@@ -1,4 +1,5 @@
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSignalSpy>
@@ -25,20 +26,8 @@ using namespace std::chrono_literals;
 using pms::desktop::CompanionClient;
 using pms::desktop::PipeStream;
 using pms::desktop::testing::FakePhone;
+using pms::desktop::testing::MemoryPins;
 namespace pl = pms::link;
-
-class MemoryPins final : public pl::PinStore {
-public:
-    [[nodiscard]] std::optional<pl::Pinned> find(const pl::Key32& key) const override {
-        const auto it = pins_.find(key);
-        return it == pins_.end() ? std::nullopt : std::optional{it->second};
-    }
-    void pin(const pl::Pinned& p) override { pins_[p.phone_key] = p; }
-    void unpin(const pl::Key32& key) override { pins_.erase(key); }
-
-private:
-    std::map<pl::Key32, pl::Pinned> pins_;
-};
 
 std::uint32_t now_unix_s() {
     return static_cast<std::uint32_t>(QDateTime::currentSecsSinceEpoch());
@@ -425,6 +414,95 @@ private slots:
 
         QTRY_COMPARE(failed.size(), 1);
         QCOMPARE(failed.front().front().toString(), QStringLiteral("too many session errors from the phone"));
+    }
+
+    // Ruling R17: a TrashRequest waiting for the previous result does not hold back other request types.
+    void waitingTrashDoesNotBlockOtherRequests() {
+        Link link{{.catalogSize = 40, .trashDelayMs = 2500}};
+        QVERIFY(link.connect());
+        auto& client = link.client();
+        QSignalSpy failed(&client, &CompanionClient::failed);
+        QSignalSpy results(&client, &CompanionClient::trashResult);
+        QSet<quint64> previews;
+        QObject::connect(&client, &CompanionClient::preview, &client,
+                         [&](const pl::Preview& preview) { previews.insert(preview.id); });
+
+        client.requestTrash({{1, 1, 1, {}}});
+        client.requestTrash({{2, 2, 2, {}}});  // waits: one TrashRequest at a time
+        QList<quint64> ids;
+        for (quint64 id = 10; id <= 40; ++id) {
+            ids.push_back(id);
+        }
+        client.requestPreviews(ids);
+
+        // All 31 previews arrive while the phone's first trash dialog is still open (2.5 s).
+        QTRY_COMPARE_WITH_TIMEOUT(previews.size(), 31, 2000);
+        QCOMPARE(results.size(), 0);
+        QCOMPARE(link.phone().trashRequestSizes().size(), std::size_t{1});
+        QCOMPARE(client.unanswered().trashQueued.size(), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(results.size(), 2, 8000);
+        QCOMPARE(link.phone().trashRequestSizes().size(), std::size_t{2});
+        QVERIFY(link.phone().maxOutstanding() <= 16);
+        QVERIFY(failed.isEmpty());
+    }
+
+    // A request sent while nothing is outstanding restarts the idle clock: the answer gets a full idle window.
+    void requestAfterAQuietSpellRestartsTheIdleClock() {
+        Link link{{.catalogSize = 3, .trashDelayMs = 1000}};
+        QVERIFY(link.connect());
+        auto& client = link.client();
+        client.setIdleTimeouts(1500ms, 1500ms);
+        QSignalSpy failed(&client, &CompanionClient::failed);
+        QSignalSpy hello(&client, &CompanionClient::helloReceived);
+        QSignalSpy results(&client, &CompanionClient::trashResult);
+        QTRY_COMPARE(hello.size(), 1);  // the last frame received
+
+        QTest::qWait(700);                  // quiet: nothing outstanding
+        client.requestTrash({{1, 1, 1, {}}});  // answered 1 s later, about 1.75 s after Hello
+
+        QTRY_COMPARE_WITH_TIMEOUT(results.size(), 1, 4000);
+        QVERIFY(failed.isEmpty());  // measured from Hello, the 1.5 s limit would have closed the session first
+    }
+
+    // A session-level Error (request id 0) is not activity: it does not push the idle deadline back.
+    void sessionErrorDoesNotRearmTheIdleClock() {
+        Link link{{.catalogSize = 3}};
+        QVERIFY(link.connect());
+        auto& client = link.client();
+        client.setIdleTimeouts(800ms, 5000ms);
+        QSignalSpy failed(&client, &CompanionClient::failed);
+        QSignalSpy hello(&client, &CompanionClient::helloReceived);
+        QTRY_COMPARE(hello.size(), 1);
+        QElapsedTimer sinceHello;
+        sinceHello.start();
+
+        QTest::qWait(500);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("^phone session error 6 busy$")));
+        link.phone().sendMessage({pl::MsgType::Error, 0, pl::ErrorMsg{6, "busy"}});
+
+        QTRY_COMPARE_WITH_TIMEOUT(failed.size(), 1, 3000);
+        QCOMPARE(failed.front().front().toString(), QStringLiteral("idle timeout"));
+        // 800 ms after Hello; had the Error re-armed the clock it would be about 1,300 ms.
+        QVERIFY2(sinceHello.elapsed() < 1150, qPrintable(QString::number(sinceHello.elapsed())));
+    }
+
+    // The transport object can vanish without emitting closed (its thread died, its owner deleted it).
+    void destroyedStreamFailsOnce() {
+        Link link{{.catalogSize = 4}};
+        QVERIFY(link.connect());
+        auto& client = link.client();
+        QSignalSpy failed(&client, &CompanionClient::failed);
+        QSignalSpy hello(&client, &CompanionClient::helloReceived);
+        QTRY_COMPARE(hello.size(), 1);
+
+        delete &link.desktopEnd();
+
+        QCOMPARE(failed.size(), 1);
+        QCOMPARE(failed.front().front().toString(), QStringLiteral("stream destroyed"));
+        client.requestPreviews({1});  // nothing to send it on, and no crash
+        QTest::qWait(50);
+        QCOMPARE(failed.size(), 1);
+        QCOMPARE(client.unanswered().previews, (QList<quint64>{1}));
     }
 };
 

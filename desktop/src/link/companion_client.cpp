@@ -34,6 +34,8 @@ CompanionClient::CompanionClient(ByteStream* stream, link::ResponderSession* ses
     connect(stream, &ByteStream::bytesReceived, this, &CompanionClient::onBytes);
     connect(stream, &ByteStream::closed, this,
             [this](const QString& reason) { fail(QStringLiteral("stream closed: %1").arg(reason)); });
+    // A transport deleted without emitting closed (its owner deleted it, its thread died) ends the session too.
+    connect(stream, &QObject::destroyed, this, [this] { fail(QStringLiteral("stream destroyed")); });
     idleTimer_.setSingleShot(true);
     connect(&idleTimer_, &QTimer::timeout, this, [this] { fail(QStringLiteral("idle timeout")); });
     sinceFrame_.start();  // the handshake's message 1 was the last frame received
@@ -109,31 +111,31 @@ void CompanionClient::enqueue(Request request) {
 }
 
 // Sends queued requests in order while credits allow. An id list takes as many ids as there are free credits (at most
-// 16 per request), so the phone always has work; the next TrashRequest goes out after the previous TrashResult.
+// 16 per request), so the phone always has work. A TrashRequest waits while another is outstanding, and the requests
+// behind it go ahead meanwhile (ruling R17): the phone's trash dialog can stay open for minutes.
 void CompanionClient::pump() {
-    while (hello_ && !failed_ && !queue_.empty()) {
-        Request& next = queue_.front();
+    std::size_t at = 0;  // an index, not an iterator: a slot reached through send() may queue more requests
+    while (hello_ && !failed_ && at < queue_.size() && credits_ < credit_window) {
+        Request& next = queue_[at];
+        if (next.type == link::MsgType::TrashRequest && trashInFlight_) {
+            ++at;
+            continue;
+        }
         const std::size_t free = credit_window - credits_;
         Request sent;
         link::Body body;
         if (is_id_list(next.type)) {
             const auto take = static_cast<std::ptrdiff_t>(std::min({free, next.ids.size(), link::max_request_ids}));
-            if (take == 0) {
-                return;
-            }
             sent.type = next.type;
             sent.ids.assign(next.ids.begin(), next.ids.begin() + take);
             next.ids.erase(next.ids.begin(), next.ids.begin() + take);
             body = link::IdList{sent.ids};
             if (next.ids.empty()) {
-                queue_.pop_front();
+                queue_.erase(queue_.begin() + static_cast<std::ptrdiff_t>(at));
             }
         } else {
-            if (free == 0 || (next.type == link::MsgType::TrashRequest && trashInFlight_)) {
-                return;
-            }
             sent = std::move(next);
-            queue_.pop_front();
+            queue_.erase(queue_.begin() + static_cast<std::ptrdiff_t>(at));
             body = sent.body;
         }
         const auto id = nextRequestId();

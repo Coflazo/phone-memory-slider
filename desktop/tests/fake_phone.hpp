@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -21,6 +22,21 @@
 #include "pms/link/session.hpp"
 
 namespace pms::desktop::testing {
+
+// Pins kept in memory, for tests.
+class MemoryPins final : public pms::link::PinStore {
+public:
+    [[nodiscard]] std::optional<pms::link::Pinned> find(const pms::link::Key32& key) const override {
+        const auto it = pins_.find(key);
+        return it == pins_.end() ? std::nullopt : std::optional{it->second};
+    }
+    void pin(const pms::link::Pinned& p) override { pins_[p.phone_key] = p; }
+    void unpin(const pms::link::Key32& key) override { pins_.erase(key); }
+    [[nodiscard]] std::size_t size() const noexcept { return pins_.size(); }
+
+private:
+    std::map<pms::link::Key32, pms::link::Pinned> pins_;
+};
 
 // A scripted phone: a real Noise IK initiator (first pairing) on one end of a ByteStream, serving a generated catalog
 // of ids 1..catalogSize with previews, keyframes, hashes and trash outcomes. It answers one response per event loop

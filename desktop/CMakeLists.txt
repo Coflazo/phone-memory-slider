@@ -35,17 +35,38 @@ else()
   target_link_libraries(pms_desktop PUBLIC OpenSSL::Crypto)
 endif()
 
-# v2 phone link client (docs/PROTOCOL.md) over a transport-agnostic ByteStream. A library of its own so its tests link
-# only the link code; it links pms_link, never pms_link_testing.
+# v2 phone link (docs/PROTOCOL.md): the RFCOMM server, the client over a transport-agnostic ByteStream, and the pinned
+# phone keys. A library of its own so its tests link only the link code; it links pms_link, never pms_link_testing.
 add_library(pms_desktop_link STATIC
   src/link/byte_stream.hpp
   src/link/companion_client.cpp
   src/link/companion_client.hpp
+  src/link/pin_store.cpp
+  src/link/pin_store.hpp
   src/link/pipe_stream.cpp
   src/link/pipe_stream.hpp
+  src/link/rfcomm_server.cpp
+  src/link/rfcomm_server.hpp
 )
 target_include_directories(pms_desktop_link PUBLIC src)
-target_link_libraries(pms_desktop_link PUBLIC pms_link Qt6::Core)
+target_link_libraries(pms_desktop_link PUBLIC pms_link Qt6::Core Qt6::Bluetooth)
+if(WIN32)
+  target_link_libraries(pms_desktop_link PRIVATE Crypt32)  # DPAPI
+elseif(APPLE)
+  target_link_libraries(pms_desktop_link PRIVATE "-framework Security" "-framework CoreFoundation")  # Keychain
+else()
+  # libsecret when the build machine has it; without it the pins live in a 0600 file (pin_store.cpp logs that).
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(LIBSECRET QUIET IMPORTED_TARGET libsecret-1)
+  endif()
+  if(LIBSECRET_FOUND)
+    target_link_libraries(pms_desktop_link PRIVATE PkgConfig::LIBSECRET)
+    target_compile_definitions(pms_desktop_link PRIVATE PMS_HAVE_LIBSECRET)
+  else()
+    message(STATUS "libsecret-1 not found: pinned phones will be kept in a 0600 file")
+  endif()
+endif()
 
 qt_add_executable(phone_memory_slider
   src/main.cpp

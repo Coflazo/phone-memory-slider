@@ -23,12 +23,14 @@ namespace pms::desktop {
 
 // The desktop side of one phone session after the Noise handshake (docs/PROTOCOL.md sections 6 to 8). It waits for
 // the phone's Hello, answers HelloAck, then sends the queued requests in order while at most 16 credits are
-// outstanding (a request for n ids holds n). Trash requests go one at a time: the next after the previous result.
+// outstanding (a request for n ids holds n). Trash requests go one at a time, the next after the previous result, and
+// requests of other types queued behind a waiting one go ahead of it.
 //
 // Per-item statuses (Missing, Unreadable, Busy) arrive through the normal signals. A protocol violation, a frame that
-// fails to decrypt, an Error that closes the session, more than 8 session-level Errors, Bye, an idle timeout or a
-// closed stream emits failed() once and closes the stream; frames after that are not processed. One client serves one connection and re-sends nothing: after failed(), read unanswered() and
-// queue it on the next connection's client. Do not delete the client from inside one of its signals.
+// fails to decrypt, an Error that closes the session, more than 8 session-level Errors, Bye, an idle timeout, a closed
+// stream or a stream deleted without closing emits failed() once and closes the stream if it is still there; frames
+// after that are not processed. One client serves one connection and re-sends nothing: after failed(), read
+// unanswered() and queue it on the next connection's client. Do not delete the client from inside one of its signals.
 class CompanionClient : public QObject {
     Q_OBJECT
 
